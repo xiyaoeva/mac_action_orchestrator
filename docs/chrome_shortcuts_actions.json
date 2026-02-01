@@ -1,0 +1,1517 @@
+{
+  "key_codes": {
+    "command": 55,
+    "shift": 56,
+    "option": 58,
+    "control": 59,
+    "tab": 48,
+    "enter": 36,
+    "escape": 53,
+    "left_arrow": 123,
+    "right_arrow": 124,
+    "minus": 27,
+    "equals": 24,
+    "left_bracket": 33,
+    "right_bracket": 30,
+    "a": 0,
+    "b": 11,
+    "c": 8,
+    "d": 2,
+    "e": 14,
+    "f": 3,
+    "g": 5,
+    "h": 4,
+    "i": 34,
+    "j": 38,
+    "k": 40,
+    "l": 37,
+    "m": 46,
+    "n": 45,
+    "o": 31,
+    "p": 35,
+    "q": 12,
+    "r": 15,
+    "s": 1,
+    "t": 17,
+    "u": 32,
+    "v": 9,
+    "w": 13,
+    "x": 7,
+    "y": 16,
+    "z": 6,
+    "0": 29,
+    "1": 18,
+    "2": 19,
+    "3": 20,
+    "4": 21,
+    "5": 23,
+    "6": 22,
+    "7": 26,
+    "8": 28,
+    "9": 25
+  },
+  "shortcuts": [
+    {
+      "id": "new_tab",
+      "name": "New tab",
+      "steps": [
+        {
+          "type": "press_key",
+          "key_code": 55
+        },
+        {
+          "type": "press_key",
+          "key_code": 17
+        },
+        {
+          "type": "wait",
+          "seconds": 0.1
+        },
+        {
+          "type": "release_key",
+          "key_code": 17
+        },
+        {
+          "type": "release_key",
+          "key_code": 55
+        }
+      ]
+    },
+    {
+      "id": "new_window",
+      "name": "New window",
+      "steps": [
+        {
+          "type": "press_key",
+          "key_code": 55
+        },
+        {
+          "type": "press_key",
+          "key_code": 45
+        },
+        {
+          "type": "wait",
+          "seconds": 0.1
+        },
+        {
+          "type": "release_key",
+          "key_code": 45
+        },
+        {
+          "type": "release_key",
+          "key_code": 55
+        }
+      ]
+    },
+    {
+      "id": "new_incognito_window",
+      "name": "New incognito window",
+      "steps": [
+        {
+          "type": "press_key",
+          "key_code": 55
+        },
+        {
+          "type": "press_key",
+          "key_code": 56
+        },
+        {
+          "type": "press_key",
+          "key_code": 45
+        },
+        {
+          "type": "wait",
+          "seconds": 0.1
+        },
+        {
+          "type": "release_key",
+          "key_code": 45
+        },
+        {
+          "type": "release_key",
+          "key_code": 56
+        },
+        {
+          "type": "release_key",
+          "key_code": 55
+        }
+      ]
+    },
+    {
+      "id": "reopen_closed_tab",
+      "name": "Reopen last closed tab",
+      "steps": [
+        {
+          "type": "press_key",
+          "key_code": 55
+        },
+        {
+          "type": "press_key",
+          "key_code": 56
+        },
+        {
+          "type": "press_key",
+          "key_code": 17
+        },
+        {
+          "type": "wait",
+          "seconds": 0.1
+        },
+        {
+          "type": "release_key",
+          "key_code": 17
+        },
+        {
+          "type": "release_key",
+          "key_code": 56
+        },
+        {
+          "type": "release_key",
+          "key_code": 55
+        }
+      ]
+    },
+    {
+      "id": "close_tab",
+      "name": "Close tab",
+      "steps": [
+        {
+          "type": "press_key",
+          "key_code": 55
+        },
+        {
+          "type": "press_key",
+          "key_code": 13
+        },
+        {
+          "type": "wait",
+          "seconds": 0.1
+        },
+        {
+          "type": "release_key",
+          "key_code": 13
+        },
+        {
+          "type": "release_key",
+          "key_code": 55
+        }
+      ]
+    },
+    {
+      "id": "close_window",
+      "name": "Close window",
+      "steps": [
+        {
+          "type": "press_key",
+          "key_code": 55
+        },
+        {
+          "type": "press_key",
+          "key_code": 56
+        },
+        {
+          "type": "press_key",
+          "key_code": 13
+        },
+        {
+          "type": "wait",
+          "seconds": 0.1
+        },
+        {
+          "type": "release_key",
+          "key_code": 13
+        },
+        {
+          "type": "release_key",
+          "key_code": 56
+        },
+        {
+          "type": "release_key",
+          "key_code": 55
+        }
+      ]
+    },
+    {
+      "id": "next_tab",
+      "name": "Next tab",
+      "steps": [
+        {
+          "type": "press_key",
+          "key_code": 59
+        },
+        {
+          "type": "press_key",
+          "key_code": 48
+        },
+        {
+          "type": "wait",
+          "seconds": 0.1
+        },
+        {
+          "type": "release_key",
+          "key_code": 48
+        },
+        {
+          "type": "release_key",
+          "key_code": 59
+        }
+      ]
+    },
+    {
+      "id": "previous_tab",
+      "name": "Previous tab",
+      "steps": [
+        {
+          "type": "press_key",
+          "key_code": 59
+        },
+        {
+          "type": "press_key",
+          "key_code": 56
+        },
+        {
+          "type": "press_key",
+          "key_code": 48
+        },
+        {
+          "type": "wait",
+          "seconds": 0.1
+        },
+        {
+          "type": "release_key",
+          "key_code": 48
+        },
+        {
+          "type": "release_key",
+          "key_code": 56
+        },
+        {
+          "type": "release_key",
+          "key_code": 59
+        }
+      ]
+    },
+    {
+      "id": "go_to_tab_1",
+      "name": "Go to tab 1",
+      "steps": [
+        {
+          "type": "press_key",
+          "key_code": 55
+        },
+        {
+          "type": "press_key",
+          "key_code": 18
+        },
+        {
+          "type": "wait",
+          "seconds": 0.1
+        },
+        {
+          "type": "release_key",
+          "key_code": 18
+        },
+        {
+          "type": "release_key",
+          "key_code": 55
+        }
+      ]
+    },
+    {
+      "id": "go_to_tab_2",
+      "name": "Go to tab 2",
+      "steps": [
+        {
+          "type": "press_key",
+          "key_code": 55
+        },
+        {
+          "type": "press_key",
+          "key_code": 19
+        },
+        {
+          "type": "wait",
+          "seconds": 0.1
+        },
+        {
+          "type": "release_key",
+          "key_code": 19
+        },
+        {
+          "type": "release_key",
+          "key_code": 55
+        }
+      ]
+    },
+    {
+      "id": "go_to_tab_3",
+      "name": "Go to tab 3",
+      "steps": [
+        {
+          "type": "press_key",
+          "key_code": 55
+        },
+        {
+          "type": "press_key",
+          "key_code": 20
+        },
+        {
+          "type": "wait",
+          "seconds": 0.1
+        },
+        {
+          "type": "release_key",
+          "key_code": 20
+        },
+        {
+          "type": "release_key",
+          "key_code": 55
+        }
+      ]
+    },
+    {
+      "id": "go_to_tab_4",
+      "name": "Go to tab 4",
+      "steps": [
+        {
+          "type": "press_key",
+          "key_code": 55
+        },
+        {
+          "type": "press_key",
+          "key_code": 21
+        },
+        {
+          "type": "wait",
+          "seconds": 0.1
+        },
+        {
+          "type": "release_key",
+          "key_code": 21
+        },
+        {
+          "type": "release_key",
+          "key_code": 55
+        }
+      ]
+    },
+    {
+      "id": "go_to_tab_5",
+      "name": "Go to tab 5",
+      "steps": [
+        {
+          "type": "press_key",
+          "key_code": 55
+        },
+        {
+          "type": "press_key",
+          "key_code": 23
+        },
+        {
+          "type": "wait",
+          "seconds": 0.1
+        },
+        {
+          "type": "release_key",
+          "key_code": 23
+        },
+        {
+          "type": "release_key",
+          "key_code": 55
+        }
+      ]
+    },
+    {
+      "id": "go_to_tab_6",
+      "name": "Go to tab 6",
+      "steps": [
+        {
+          "type": "press_key",
+          "key_code": 55
+        },
+        {
+          "type": "press_key",
+          "key_code": 22
+        },
+        {
+          "type": "wait",
+          "seconds": 0.1
+        },
+        {
+          "type": "release_key",
+          "key_code": 22
+        },
+        {
+          "type": "release_key",
+          "key_code": 55
+        }
+      ]
+    },
+    {
+      "id": "go_to_tab_7",
+      "name": "Go to tab 7",
+      "steps": [
+        {
+          "type": "press_key",
+          "key_code": 55
+        },
+        {
+          "type": "press_key",
+          "key_code": 26
+        },
+        {
+          "type": "wait",
+          "seconds": 0.1
+        },
+        {
+          "type": "release_key",
+          "key_code": 26
+        },
+        {
+          "type": "release_key",
+          "key_code": 55
+        }
+      ]
+    },
+    {
+      "id": "go_to_tab_8",
+      "name": "Go to tab 8",
+      "steps": [
+        {
+          "type": "press_key",
+          "key_code": 55
+        },
+        {
+          "type": "press_key",
+          "key_code": 28
+        },
+        {
+          "type": "wait",
+          "seconds": 0.1
+        },
+        {
+          "type": "release_key",
+          "key_code": 28
+        },
+        {
+          "type": "release_key",
+          "key_code": 55
+        }
+      ]
+    },
+    {
+      "id": "go_to_last_tab",
+      "name": "Go to last tab",
+      "steps": [
+        {
+          "type": "press_key",
+          "key_code": 55
+        },
+        {
+          "type": "press_key",
+          "key_code": 25
+        },
+        {
+          "type": "wait",
+          "seconds": 0.1
+        },
+        {
+          "type": "release_key",
+          "key_code": 25
+        },
+        {
+          "type": "release_key",
+          "key_code": 55
+        }
+      ]
+    },
+    {
+      "id": "move_tab_left",
+      "name": "Move tab left",
+      "steps": [
+        {
+          "type": "press_key",
+          "key_code": 55
+        },
+        {
+          "type": "press_key",
+          "key_code": 58
+        },
+        {
+          "type": "press_key",
+          "key_code": 123
+        },
+        {
+          "type": "wait",
+          "seconds": 0.1
+        },
+        {
+          "type": "release_key",
+          "key_code": 123
+        },
+        {
+          "type": "release_key",
+          "key_code": 58
+        },
+        {
+          "type": "release_key",
+          "key_code": 55
+        }
+      ]
+    },
+    {
+      "id": "move_tab_right",
+      "name": "Move tab right",
+      "steps": [
+        {
+          "type": "press_key",
+          "key_code": 55
+        },
+        {
+          "type": "press_key",
+          "key_code": 58
+        },
+        {
+          "type": "press_key",
+          "key_code": 124
+        },
+        {
+          "type": "wait",
+          "seconds": 0.1
+        },
+        {
+          "type": "release_key",
+          "key_code": 124
+        },
+        {
+          "type": "release_key",
+          "key_code": 58
+        },
+        {
+          "type": "release_key",
+          "key_code": 55
+        }
+      ]
+    },
+    {
+      "id": "reload",
+      "name": "Reload",
+      "steps": [
+        {
+          "type": "press_key",
+          "key_code": 55
+        },
+        {
+          "type": "press_key",
+          "key_code": 15
+        },
+        {
+          "type": "wait",
+          "seconds": 0.1
+        },
+        {
+          "type": "release_key",
+          "key_code": 15
+        },
+        {
+          "type": "release_key",
+          "key_code": 55
+        }
+      ]
+    },
+    {
+      "id": "hard_reload",
+      "name": "Hard reload",
+      "steps": [
+        {
+          "type": "press_key",
+          "key_code": 55
+        },
+        {
+          "type": "press_key",
+          "key_code": 56
+        },
+        {
+          "type": "press_key",
+          "key_code": 15
+        },
+        {
+          "type": "wait",
+          "seconds": 0.1
+        },
+        {
+          "type": "release_key",
+          "key_code": 15
+        },
+        {
+          "type": "release_key",
+          "key_code": 56
+        },
+        {
+          "type": "release_key",
+          "key_code": 55
+        }
+      ]
+    },
+    {
+      "id": "stop_loading",
+      "name": "Stop loading",
+      "steps": [
+        {
+          "type": "press_key",
+          "key_code": 53
+        },
+        {
+          "type": "wait",
+          "seconds": 0.1
+        },
+        {
+          "type": "release_key",
+          "key_code": 53
+        }
+      ]
+    },
+    {
+      "id": "back_arrow",
+      "name": "Back (command + left arrow)",
+      "steps": [
+        {
+          "type": "press_key",
+          "key_code": 55
+        },
+        {
+          "type": "press_key",
+          "key_code": 123
+        },
+        {
+          "type": "wait",
+          "seconds": 0.1
+        },
+        {
+          "type": "release_key",
+          "key_code": 123
+        },
+        {
+          "type": "release_key",
+          "key_code": 55
+        }
+      ]
+    },
+    {
+      "id": "back_bracket",
+      "name": "Back (command + [)",
+      "steps": [
+        {
+          "type": "press_key",
+          "key_code": 55
+        },
+        {
+          "type": "press_key",
+          "key_code": 33
+        },
+        {
+          "type": "wait",
+          "seconds": 0.1
+        },
+        {
+          "type": "release_key",
+          "key_code": 33
+        },
+        {
+          "type": "release_key",
+          "key_code": 55
+        }
+      ]
+    },
+    {
+      "id": "forward_arrow",
+      "name": "Forward (command + right arrow)",
+      "steps": [
+        {
+          "type": "press_key",
+          "key_code": 55
+        },
+        {
+          "type": "press_key",
+          "key_code": 124
+        },
+        {
+          "type": "wait",
+          "seconds": 0.1
+        },
+        {
+          "type": "release_key",
+          "key_code": 124
+        },
+        {
+          "type": "release_key",
+          "key_code": 55
+        }
+      ]
+    },
+    {
+      "id": "forward_bracket",
+      "name": "Forward (command + ])",
+      "steps": [
+        {
+          "type": "press_key",
+          "key_code": 55
+        },
+        {
+          "type": "press_key",
+          "key_code": 30
+        },
+        {
+          "type": "wait",
+          "seconds": 0.1
+        },
+        {
+          "type": "release_key",
+          "key_code": 30
+        },
+        {
+          "type": "release_key",
+          "key_code": 55
+        }
+      ]
+    },
+    {
+      "id": "open_file",
+      "name": "Open file",
+      "steps": [
+        {
+          "type": "press_key",
+          "key_code": 55
+        },
+        {
+          "type": "press_key",
+          "key_code": 31
+        },
+        {
+          "type": "wait",
+          "seconds": 0.1
+        },
+        {
+          "type": "release_key",
+          "key_code": 31
+        },
+        {
+          "type": "release_key",
+          "key_code": 55
+        }
+      ]
+    },
+    {
+      "id": "print",
+      "name": "Print",
+      "steps": [
+        {
+          "type": "press_key",
+          "key_code": 55
+        },
+        {
+          "type": "press_key",
+          "key_code": 35
+        },
+        {
+          "type": "wait",
+          "seconds": 0.1
+        },
+        {
+          "type": "release_key",
+          "key_code": 35
+        },
+        {
+          "type": "release_key",
+          "key_code": 55
+        }
+      ]
+    },
+    {
+      "id": "save_page_as",
+      "name": "Save page as",
+      "steps": [
+        {
+          "type": "press_key",
+          "key_code": 55
+        },
+        {
+          "type": "press_key",
+          "key_code": 1
+        },
+        {
+          "type": "wait",
+          "seconds": 0.1
+        },
+        {
+          "type": "release_key",
+          "key_code": 1
+        },
+        {
+          "type": "release_key",
+          "key_code": 55
+        }
+      ]
+    },
+    {
+      "id": "find",
+      "name": "Find",
+      "steps": [
+        {
+          "type": "press_key",
+          "key_code": 55
+        },
+        {
+          "type": "press_key",
+          "key_code": 3
+        },
+        {
+          "type": "wait",
+          "seconds": 0.1
+        },
+        {
+          "type": "release_key",
+          "key_code": 3
+        },
+        {
+          "type": "release_key",
+          "key_code": 55
+        }
+      ]
+    },
+    {
+      "id": "find_next",
+      "name": "Find next",
+      "steps": [
+        {
+          "type": "press_key",
+          "key_code": 55
+        },
+        {
+          "type": "press_key",
+          "key_code": 5
+        },
+        {
+          "type": "wait",
+          "seconds": 0.1
+        },
+        {
+          "type": "release_key",
+          "key_code": 5
+        },
+        {
+          "type": "release_key",
+          "key_code": 55
+        }
+      ]
+    },
+    {
+      "id": "find_previous",
+      "name": "Find previous",
+      "steps": [
+        {
+          "type": "press_key",
+          "key_code": 55
+        },
+        {
+          "type": "press_key",
+          "key_code": 56
+        },
+        {
+          "type": "press_key",
+          "key_code": 5
+        },
+        {
+          "type": "wait",
+          "seconds": 0.1
+        },
+        {
+          "type": "release_key",
+          "key_code": 5
+        },
+        {
+          "type": "release_key",
+          "key_code": 56
+        },
+        {
+          "type": "release_key",
+          "key_code": 55
+        }
+      ]
+    },
+    {
+      "id": "zoom_in",
+      "name": "Zoom in (command + plus)",
+      "notes": "Uses command + shift + '=' to produce '+'.",
+      "steps": [
+        {
+          "type": "press_key",
+          "key_code": 55
+        },
+        {
+          "type": "press_key",
+          "key_code": 56
+        },
+        {
+          "type": "press_key",
+          "key_code": 24
+        },
+        {
+          "type": "wait",
+          "seconds": 0.1
+        },
+        {
+          "type": "release_key",
+          "key_code": 24
+        },
+        {
+          "type": "release_key",
+          "key_code": 56
+        },
+        {
+          "type": "release_key",
+          "key_code": 55
+        }
+      ]
+    },
+    {
+      "id": "zoom_out",
+      "name": "Zoom out",
+      "steps": [
+        {
+          "type": "press_key",
+          "key_code": 55
+        },
+        {
+          "type": "press_key",
+          "key_code": 27
+        },
+        {
+          "type": "wait",
+          "seconds": 0.1
+        },
+        {
+          "type": "release_key",
+          "key_code": 27
+        },
+        {
+          "type": "release_key",
+          "key_code": 55
+        }
+      ]
+    },
+    {
+      "id": "reset_zoom",
+      "name": "Reset zoom",
+      "steps": [
+        {
+          "type": "press_key",
+          "key_code": 55
+        },
+        {
+          "type": "press_key",
+          "key_code": 29
+        },
+        {
+          "type": "wait",
+          "seconds": 0.1
+        },
+        {
+          "type": "release_key",
+          "key_code": 29
+        },
+        {
+          "type": "release_key",
+          "key_code": 55
+        }
+      ]
+    },
+    {
+      "id": "full_screen",
+      "name": "Full screen",
+      "steps": [
+        {
+          "type": "press_key",
+          "key_code": 59
+        },
+        {
+          "type": "press_key",
+          "key_code": 55
+        },
+        {
+          "type": "press_key",
+          "key_code": 3
+        },
+        {
+          "type": "wait",
+          "seconds": 0.1
+        },
+        {
+          "type": "release_key",
+          "key_code": 3
+        },
+        {
+          "type": "release_key",
+          "key_code": 55
+        },
+        {
+          "type": "release_key",
+          "key_code": 59
+        }
+      ]
+    },
+    {
+      "id": "focus_address_bar",
+      "name": "Focus address bar",
+      "steps": [
+        {
+          "type": "press_key",
+          "key_code": 55
+        },
+        {
+          "type": "press_key",
+          "key_code": 37
+        },
+        {
+          "type": "wait",
+          "seconds": 0.1
+        },
+        {
+          "type": "release_key",
+          "key_code": 37
+        },
+        {
+          "type": "release_key",
+          "key_code": 55
+        }
+      ]
+    },
+    {
+      "id": "open_location",
+      "name": "Open location",
+      "notes": "After focus, type URL and press Enter.",
+      "steps": [
+        {
+          "type": "press_key",
+          "key_code": 55
+        },
+        {
+          "type": "press_key",
+          "key_code": 37
+        },
+        {
+          "type": "wait",
+          "seconds": 0.1
+        },
+        {
+          "type": "release_key",
+          "key_code": 37
+        },
+        {
+          "type": "release_key",
+          "key_code": 55
+        }
+      ]
+    },
+    {
+      "id": "open_search_in_new_tab",
+      "name": "Open search in new tab",
+      "notes": "Requires focused address bar/search field.",
+      "steps": [
+        {
+          "type": "press_key",
+          "key_code": 55
+        },
+        {
+          "type": "press_key",
+          "key_code": 36
+        },
+        {
+          "type": "wait",
+          "seconds": 0.1
+        },
+        {
+          "type": "release_key",
+          "key_code": 36
+        },
+        {
+          "type": "release_key",
+          "key_code": 55
+        }
+      ]
+    },
+    {
+      "id": "show_bookmarks_bar",
+      "name": "Show bookmarks bar",
+      "steps": [
+        {
+          "type": "press_key",
+          "key_code": 55
+        },
+        {
+          "type": "press_key",
+          "key_code": 56
+        },
+        {
+          "type": "press_key",
+          "key_code": 11
+        },
+        {
+          "type": "wait",
+          "seconds": 0.1
+        },
+        {
+          "type": "release_key",
+          "key_code": 11
+        },
+        {
+          "type": "release_key",
+          "key_code": 56
+        },
+        {
+          "type": "release_key",
+          "key_code": 55
+        }
+      ]
+    },
+    {
+      "id": "bookmark_this_tab",
+      "name": "Bookmark this tab",
+      "steps": [
+        {
+          "type": "press_key",
+          "key_code": 55
+        },
+        {
+          "type": "press_key",
+          "key_code": 2
+        },
+        {
+          "type": "wait",
+          "seconds": 0.1
+        },
+        {
+          "type": "release_key",
+          "key_code": 2
+        },
+        {
+          "type": "release_key",
+          "key_code": 55
+        }
+      ]
+    },
+    {
+      "id": "bookmark_manager",
+      "name": "Bookmark manager",
+      "steps": [
+        {
+          "type": "press_key",
+          "key_code": 55
+        },
+        {
+          "type": "press_key",
+          "key_code": 58
+        },
+        {
+          "type": "press_key",
+          "key_code": 11
+        },
+        {
+          "type": "wait",
+          "seconds": 0.1
+        },
+        {
+          "type": "release_key",
+          "key_code": 11
+        },
+        {
+          "type": "release_key",
+          "key_code": 58
+        },
+        {
+          "type": "release_key",
+          "key_code": 55
+        }
+      ]
+    },
+    {
+      "id": "history",
+      "name": "History",
+      "steps": [
+        {
+          "type": "press_key",
+          "key_code": 55
+        },
+        {
+          "type": "press_key",
+          "key_code": 16
+        },
+        {
+          "type": "wait",
+          "seconds": 0.1
+        },
+        {
+          "type": "release_key",
+          "key_code": 16
+        },
+        {
+          "type": "release_key",
+          "key_code": 55
+        }
+      ]
+    },
+    {
+      "id": "downloads",
+      "name": "Downloads",
+      "steps": [
+        {
+          "type": "press_key",
+          "key_code": 55
+        },
+        {
+          "type": "press_key",
+          "key_code": 56
+        },
+        {
+          "type": "press_key",
+          "key_code": 38
+        },
+        {
+          "type": "wait",
+          "seconds": 0.1
+        },
+        {
+          "type": "release_key",
+          "key_code": 38
+        },
+        {
+          "type": "release_key",
+          "key_code": 56
+        },
+        {
+          "type": "release_key",
+          "key_code": 55
+        }
+      ]
+    },
+    {
+      "id": "toggle_devtools",
+      "name": "Toggle DevTools",
+      "steps": [
+        {
+          "type": "press_key",
+          "key_code": 55
+        },
+        {
+          "type": "press_key",
+          "key_code": 58
+        },
+        {
+          "type": "press_key",
+          "key_code": 34
+        },
+        {
+          "type": "wait",
+          "seconds": 0.1
+        },
+        {
+          "type": "release_key",
+          "key_code": 34
+        },
+        {
+          "type": "release_key",
+          "key_code": 58
+        },
+        {
+          "type": "release_key",
+          "key_code": 55
+        }
+      ]
+    },
+    {
+      "id": "console",
+      "name": "Console",
+      "steps": [
+        {
+          "type": "press_key",
+          "key_code": 55
+        },
+        {
+          "type": "press_key",
+          "key_code": 58
+        },
+        {
+          "type": "press_key",
+          "key_code": 38
+        },
+        {
+          "type": "wait",
+          "seconds": 0.1
+        },
+        {
+          "type": "release_key",
+          "key_code": 38
+        },
+        {
+          "type": "release_key",
+          "key_code": 58
+        },
+        {
+          "type": "release_key",
+          "key_code": 55
+        }
+      ]
+    },
+    {
+      "id": "inspect_element",
+      "name": "Inspect element",
+      "steps": [
+        {
+          "type": "press_key",
+          "key_code": 55
+        },
+        {
+          "type": "press_key",
+          "key_code": 56
+        },
+        {
+          "type": "press_key",
+          "key_code": 8
+        },
+        {
+          "type": "wait",
+          "seconds": 0.1
+        },
+        {
+          "type": "release_key",
+          "key_code": 8
+        },
+        {
+          "type": "release_key",
+          "key_code": 56
+        },
+        {
+          "type": "release_key",
+          "key_code": 55
+        }
+      ]
+    },
+    {
+      "id": "view_source",
+      "name": "View source",
+      "steps": [
+        {
+          "type": "press_key",
+          "key_code": 55
+        },
+        {
+          "type": "press_key",
+          "key_code": 58
+        },
+        {
+          "type": "press_key",
+          "key_code": 32
+        },
+        {
+          "type": "wait",
+          "seconds": 0.1
+        },
+        {
+          "type": "release_key",
+          "key_code": 32
+        },
+        {
+          "type": "release_key",
+          "key_code": 58
+        },
+        {
+          "type": "release_key",
+          "key_code": 55
+        }
+      ]
+    },
+    {
+      "id": "open_new_tab_background",
+      "name": "Open new tab in background (command + click)",
+      "notes": "Perform a mouse click while Command is held.",
+      "steps": [
+        {
+          "type": "press_key",
+          "key_code": 55
+        },
+        {
+          "type": "wait",
+          "seconds": 0.1
+        },
+        {
+          "type": "release_key",
+          "key_code": 55
+        }
+      ]
+    },
+    {
+      "id": "open_link_new_tab",
+      "name": "Open link in new tab (command + click)",
+      "notes": "Perform a mouse click while Command is held.",
+      "steps": [
+        {
+          "type": "press_key",
+          "key_code": 55
+        },
+        {
+          "type": "wait",
+          "seconds": 0.1
+        },
+        {
+          "type": "release_key",
+          "key_code": 55
+        }
+      ]
+    },
+    {
+      "id": "open_link_new_window",
+      "name": "Open link in new window (shift + click)",
+      "notes": "Perform a mouse click while Shift is held.",
+      "steps": [
+        {
+          "type": "press_key",
+          "key_code": 56
+        },
+        {
+          "type": "wait",
+          "seconds": 0.1
+        },
+        {
+          "type": "release_key",
+          "key_code": 56
+        }
+      ]
+    },
+    {
+      "id": "quit_chrome",
+      "name": "Quit Chrome",
+      "steps": [
+        {
+          "type": "press_key",
+          "key_code": 55
+        },
+        {
+          "type": "press_key",
+          "key_code": 12
+        },
+        {
+          "type": "wait",
+          "seconds": 0.1
+        },
+        {
+          "type": "release_key",
+          "key_code": 12
+        },
+        {
+          "type": "release_key",
+          "key_code": 55
+        }
+      ]
+    }
+  ]
+}

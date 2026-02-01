@@ -1,0 +1,460 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Mac Action Orchestrator</title>
+  <style>
+    body { font-family: -apple-system, system-ui; margin: 20px; }
+    textarea, input { width: 100%; font-family: ui-monospace, Menlo, monospace; }
+    .row { display: flex; gap: 16px; }
+    .col { flex: 1; }
+    .card { border: 1px solid #ddd; border-radius: 10px; padding: 12px; margin-bottom: 16px; }
+    button { padding: 8px 12px; }
+    img { max-width: 100%; border: 1px solid #eee; border-radius: 8px; }
+    pre { background: #f7f7f7; padding: 10px; border-radius: 8px; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <h2>Mac Action Orchestrator (Local)</h2>
+
+  <div class="card">
+    <h3>Run Action JSON</h3>
+    <p>
+      Cooldown seconds:
+      <input id="cooldown" type="number" step="0.1" min="0" value="5" style="width:120px;" />
+    </p>
+    <p>
+      Max plan_again (empty = unlimited):
+      <input id="max-plan-again" type="number" step="1" min="0" style="width:120px;" />
+    </p>
+    <p>Example:</p>
+    <pre>{
+  "type": "finder_about_this_mac"
+}</pre>
+
+    <textarea id="action" rows="8">{ "type": "finder_about_this_mac" }</textarea>
+    <div style="margin-top:10px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+      <button onclick="runAction()">Run</button>
+      <button onclick="capture()">Capture Screen</button>
+      <button onclick="fetchScreenSize()">Get Screen Size</button>
+      <span id="screen-size" style="color:#555;"></span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Gemini Planner</h3>
+    <p>Describe the task. The model returns JSON actions via function calling.</p>
+    <textarea id="plan-prompt" rows="4">打开 Chrome，访问 https://www.google.com，然后在搜索框输入 "mac action orchestrator" 并回车。</textarea>
+    <div style="margin-top:10px;">
+      <button onclick="generatePlan()">Generate Actions</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Find XY (OCR)</h3>
+    <p>Find the center coordinate of a text string in a local screenshot.</p>
+    <p>
+      Screenshot path:
+      <input id="ocr-path" type="text" placeholder="/absolute/path/to/screenshot.png" />
+    </p>
+    <p>
+      Text (case-insensitive):
+      <input id="ocr-text" type="text" placeholder="Gmail" />
+    </p>
+    <div style="margin-top:10px;">
+      <button onclick="findXY()">Find XY</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Annotate Targets (OCR)</h3>
+    <p>Generate a numbered image for all matching targets.</p>
+    <p>
+      Screenshot path:
+      <input id="annotate-path" type="text" placeholder="/absolute/path/to/screenshot.png" />
+    </p>
+    <p>
+      Target text (case-insensitive):
+      <input id="annotate-text" type="text" placeholder="Gmail" />
+    </p>
+    <div style="margin-top:10px;">
+      <button onclick="annotateTargets()">Generate Numbered Image</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Run Actions Sequence</h3>
+    <p>Each box is an actions array. Runs in order with 5s between batches.</p>
+    <div id="actions-sequence"></div>
+    <div style="margin-top:10px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+      <button onclick="runActionsSequence()">Run Sequence</button>
+      <button id="toggle-pause-plan-again" onclick="togglePausePlanAgain()">Pause on plan_again: OFF</button>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col card">
+      <h3>Result</h3>
+      <div style="margin-bottom:6px; color:#555;">
+        Latest Tab URL: <span id="latest-tab-url">-</span>
+      </div>
+      <pre id="result">-</pre>
+    </div>
+    <div class="col card">
+      <h3>Latest Screenshot</h3>
+      <img id="shot" src="" alt="(no screenshot yet)" />
+    </div>
+  </div>
+
+<script>
+let pauseOnPlanAgain = false;
+
+function togglePausePlanAgain() {
+  pauseOnPlanAgain = !pauseOnPlanAgain;
+  const btn = document.getElementById("toggle-pause-plan-again");
+  if (btn) {
+    btn.textContent = pauseOnPlanAgain ? "Pause on plan_again: ON" : "Pause on plan_again: OFF";
+  }
+}
+
+async function runAction() {
+  const txt = document.getElementById("action").value;
+  let payload;
+  try { payload = JSON.parse(txt); } catch(e) {
+    alert("Invalid JSON"); return;
+  }
+  const cooldown = readCooldown();
+  const url = cooldown === null ? "/api/run_action" : ("/api/run_action?cooldown_seconds=" + cooldown);
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify(payload)
+  });
+  const data = await res.json();
+  document.getElementById("result").textContent = JSON.stringify(data, null, 2);
+  updateLatestTabUrl(data);
+  if (data.screenshot_url) {
+    document.getElementById("shot").src = data.screenshot_url + "?t=" + Date.now();
+  }
+}
+
+async function capture() {
+  const res = await fetch("/api/capture", {method: "POST"});
+  const data = await res.json();
+  document.getElementById("result").textContent = JSON.stringify(data, null, 2);
+  updateLatestTabUrl(data);
+  if (data.screenshot_url) {
+    document.getElementById("shot").src = data.screenshot_url + "?t=" + Date.now();
+  }
+}
+
+async function fetchScreenSize() {
+  const res = await fetch("/api/screen_size", {method: "POST"});
+  const data = await res.json();
+  document.getElementById("result").textContent = JSON.stringify(data, null, 2);
+  const el = document.getElementById("screen-size");
+  if (data.ok && data.width && data.height) {
+    el.textContent = `Screen: ${data.width}×${data.height}`;
+  } else {
+    el.textContent = "";
+  }
+}
+
+window.addEventListener("load", () => {
+  fetchScreenSize();
+});
+
+async function runActionsPayload(payload) {
+  const cooldown = readCooldown();
+  const maxPlanAgain = readMaxPlanAgain();
+  const contextPrompt = readContextPrompt();
+  const res = await fetch("/api/run_actions", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({
+      actions: payload,
+      cooldown_seconds: cooldown,
+      max_plan_again: maxPlanAgain,
+      pause_on_plan_again: pauseOnPlanAgain,
+      context_prompt: contextPrompt
+    })
+  });
+  const data = await res.json();
+  document.getElementById("result").textContent = JSON.stringify(data, null, 2);
+  updateLatestTabUrl(data);
+  if (data.screenshot_url) {
+    document.getElementById("shot").src = data.screenshot_url + "?t=" + Date.now();
+  }
+  if (data.paused && data.pause_reason === "plan_again" && data.action && data.action.prompt) {
+    await handlePlanAgainPause(data);
+  }
+  if (data.paused && data.pause_reason === "multi_target") {
+    await handleMultiTargetPause(data);
+  }
+  return data;
+}
+
+function addActionsBox(afterEl, initialValue) {
+  const container = document.getElementById("actions-sequence");
+  const idx = container.children.length + 1;
+  const wrapper = document.createElement("div");
+  wrapper.style.marginBottom = "10px";
+  wrapper.style.border = "1px solid #eee";
+  wrapper.style.borderRadius = "8px";
+  wrapper.style.padding = "8px";
+  const label = document.createElement("div");
+  label.style.display = "flex";
+  label.style.alignItems = "center";
+  label.style.justifyContent = "space-between";
+  const title = document.createElement("div");
+  title.textContent = "Batch " + idx;
+  const controls = document.createElement("div");
+  const addBtn = document.createElement("button");
+  addBtn.textContent = "+";
+  addBtn.style.marginRight = "6px";
+  addBtn.onclick = () => addActionsBox(wrapper);
+  const removeBtn = document.createElement("button");
+  removeBtn.textContent = "-";
+  removeBtn.onclick = () => {
+    wrapper.remove();
+    renumberBatches();
+  };
+  controls.appendChild(addBtn);
+  controls.appendChild(removeBtn);
+  label.appendChild(title);
+  label.appendChild(controls);
+  const textarea = document.createElement("textarea");
+  textarea.className = "actions-item";
+  textarea.rows = 6;
+  textarea.value = initialValue || `[\n  { "type": "open_url", "url": "https://www.google.com" }\n]`;
+  wrapper.appendChild(label);
+  wrapper.appendChild(textarea);
+  if (afterEl && afterEl.parentNode === container) {
+    container.insertBefore(wrapper, afterEl.nextSibling);
+  } else {
+    container.appendChild(wrapper);
+  }
+  renumberBatches();
+}
+
+function renumberBatches() {
+  const container = document.getElementById("actions-sequence");
+  Array.from(container.children).forEach((wrapper, index) => {
+    const label = wrapper.querySelector("div");
+    if (label && label.firstChild) {
+      label.firstChild.textContent = "Batch " + (index + 1);
+    }
+  });
+}
+
+async function runActionsSequence() {
+  const items = document.querySelectorAll(".actions-item");
+  if (!items.length) {
+    alert("Add at least one batch."); return;
+  }
+  const cooldown = readCooldown();
+  const delayMs = cooldown === null ? 0 : Math.max(0, cooldown * 1000);
+  for (let i = 0; i < items.length; i++) {
+    let payload;
+    try { payload = JSON.parse(items[i].value); } catch(e) {
+      alert("Invalid JSON in batch " + (i + 1)); return;
+    }
+    const data = await runActionsPayload(payload);
+    if (data && data.paused) {
+      return;
+    }
+    if (data && data.ok === false) {
+      return;
+    }
+    if (delayMs > 0) {
+      await new Promise(r => setTimeout(r, delayMs));
+    }
+  }
+}
+
+function readCooldown() {
+  const raw = document.getElementById("cooldown").value;
+  if (raw === "") { return null; }
+  const value = Number(raw);
+  if (Number.isNaN(value) || value < 0) { return null; }
+  return value;
+}
+
+function readMaxPlanAgain() {
+  const raw = document.getElementById("max-plan-again").value;
+  if (raw === "") { return null; }
+  const value = Number(raw);
+  if (Number.isNaN(value) || value < 0) { return null; }
+  return value;
+}
+
+function readContextPrompt() {
+  const el = document.getElementById("plan-prompt");
+  if (!el) return null;
+  const value = el.value.trim();
+  return value || null;
+}
+
+async function handlePlanAgainPause(data) {
+  const prompt = data.action.prompt;
+  const confirmRun = confirm(
+    "Reached plan_again. Send screenshot + remaining prompt to Gemini to get new actions?"
+  );
+  if (!confirmRun) {
+    return;
+  }
+  setPlanPromptValue(prompt);
+  const res = await fetch("/api/plan_again", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({prompt})
+  });
+  const planData = await res.json();
+  document.getElementById("result").textContent = JSON.stringify(planData, null, 2);
+  updateLatestTabUrl(planData);
+  if (!planData.ok) {
+    alert(planData.error || "plan_again failed.");
+    return;
+  }
+  if (planData.args && Array.isArray(planData.args.batches)) {
+    setActionsSequence(planData.args.batches);
+    setPlanPromptValue(prompt);
+    alert("New plan generated. Click Run Sequence to execute.");
+  }
+}
+
+function setPlanPromptValue(value) {
+  const el = document.getElementById("plan-prompt");
+  if (!el) return;
+  if (typeof value !== "string") return;
+  el.value = value;
+}
+
+async function handleMultiTargetPause(data) {
+  if (data.annotated_url) {
+    document.getElementById("shot").src = data.annotated_url + "?t=" + Date.now();
+  }
+  const confirmAsk = confirm(
+    "Multiple targets found. Send annotated screenshot to Gemini to choose the correct number?"
+  );
+  if (!confirmAsk) {
+    return;
+  }
+  const prompt = data.prompt_used || null;
+  const res = await fetch("/api/choose_target", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({prompt})
+  });
+  const chooseData = await res.json();
+  document.getElementById("result").textContent = JSON.stringify(chooseData, null, 2);
+  updateLatestTabUrl(chooseData);
+  if (!chooseData.ok) {
+    alert(chooseData.error || "Gemini selection failed.");
+    return;
+  }
+  const index = chooseData.index;
+  const confirmRun = confirm(`Gemini chose target #${index}. Execute click?`);
+  if (!confirmRun) {
+    return;
+  }
+  const execRes = await fetch("/api/execute_click", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({index})
+  });
+  const execData = await execRes.json();
+  document.getElementById("result").textContent = JSON.stringify(execData, null, 2);
+  updateLatestTabUrl(execData);
+  if (execData.screenshot_url) {
+    document.getElementById("shot").src = execData.screenshot_url + "?t=" + Date.now();
+  }
+}
+
+async function generatePlan(alreadyRetried) {
+  const prompt = document.getElementById("plan-prompt").value.trim();
+  if (!prompt) {
+    alert("Please enter a prompt."); return;
+  }
+  const res = await fetch("/api/plan_actions", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({prompt})
+  });
+  const data = await res.json();
+  document.getElementById("result").textContent = JSON.stringify(data, null, 2);
+  if (!data.ok && data.error) {
+    if (data.error.includes("Missing dependency") || data.error.includes("API key")) {
+      alert(data.error);
+      return;
+    }
+  }
+  if (!data.ok && data.retryable && !alreadyRetried) {
+    alert(data.error + "\n\n格式不符合要求，请点击 Generate Actions 重新调用 Gemini。");
+    return;
+  }
+  if (data.ok && data.args) {
+    if (Array.isArray(data.args.batches)) {
+      setActionsSequence(data.args.batches);
+    }
+  }
+}
+
+async function findXY() {
+  const path = document.getElementById("ocr-path").value.trim();
+  const text = document.getElementById("ocr-text").value.trim();
+  if (!path || !text) {
+    alert("Please provide screenshot path and text."); return;
+  }
+  const res = await fetch("/api/find_xy", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({path, text})
+  });
+  const data = await res.json();
+  document.getElementById("result").textContent = JSON.stringify(data, null, 2);
+  updateLatestTabUrl(data);
+}
+
+async function annotateTargets() {
+  const path = document.getElementById("annotate-path").value.trim();
+  const text = document.getElementById("annotate-text").value.trim();
+  if (!path || !text) {
+    alert("Please provide screenshot path and target text."); return;
+  }
+  const res = await fetch("/api/annotate_targets", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({path, text})
+  });
+  const data = await res.json();
+  document.getElementById("result").textContent = JSON.stringify(data, null, 2);
+  updateLatestTabUrl(data);
+  if (data.annotated_url) {
+    document.getElementById("shot").src = data.annotated_url + "?t=" + Date.now();
+  }
+}
+
+function setActionsSequence(batches) {
+  const container = document.getElementById("actions-sequence");
+  container.innerHTML = "";
+  batches.forEach((batch) => {
+    const value = JSON.stringify(batch, null, 2);
+    addActionsBox(null, value);
+  });
+  renumberBatches();
+}
+
+function updateLatestTabUrl(data) {
+  if (!data || !("latest_tab_url" in data)) {
+    return;
+  }
+  const el = document.getElementById("latest-tab-url");
+  if (!el) return;
+  el.textContent = data.latest_tab_url || "-";
+}
+
+addActionsBox();
+</script>
+</body>
+</html>
