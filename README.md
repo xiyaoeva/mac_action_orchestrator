@@ -66,7 +66,6 @@ Prompt examples:
 - `Open https://www.google.com in Chrome, open a new tab, then move to the tab on the left. In that tab, type "wiki" and press Enter. Wait for the results page, then scroll twice. After scrolling, click the lowest (bottom-most) visible result that contains "Wikipedia". Do not open links in a new tab.`
 - `Open https://www.google.com in Chrome, then search for "top national parks in the U.S." and press Enter. Wait for results, scroll twice, then find entries related to "Yellowstone". Click the lowest visible Yellowstone-related result on screen. If multiple similar targets are visible, choose the bottom-most one without opening a new tab.`
 
-
 ## 5. First-time macOS permissions
 
 You may need to allow permissions for Terminal:
