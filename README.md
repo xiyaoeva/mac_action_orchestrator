@@ -6,7 +6,6 @@ Local-first macOS action orchestrator with FastAPI + Uvicorn + Gemini planner.
 
 - macOS
 - Python 3.10+ (recommended: 3.11 or 3.12)
-- `pip` available
 - Apple Vision Framework (built into macOS) for OCR
 - Xcode Command Line Tools (required for `swift` runtime):
   `xcode-select --install`
