@@ -7,10 +7,17 @@ Local-first macOS action orchestrator with FastAPI + Uvicorn + Gemini planner.
 - macOS
 - Python 3.10+ (recommended: 3.11 or 3.12)
 - `pip` available
+- Apple Vision Framework (built into macOS) for OCR
+- Xcode Command Line Tools (required for `swift` runtime):
+  `xcode-select --install`
 
 Why 3.10+:
 - Python 3.9 is already EOL and may trigger warnings with newer `google-auth`.
 - System Python on older macOS may use LibreSSL, which can cause `urllib3` warnings.
+
+OCR note:
+- Vision OCR is executed through a Swift script (`Vision`/`AppKit`/`Foundation`).
+- On a fresh machine/session, the first OCR call may be noticeably slower due to cold-start compilation/loading, and this can cause the first run to fail (for example, OCR timeout). A retry usually succeeds once warmup is complete.
 
 ## 2. Setup
 
@@ -46,10 +53,17 @@ Current code is set to local execution mode for hackathon use.
 ```bash
 source .venv/bin/activate
 uvicorn app:app --reload --port 8000
-open -na "Google Chrome" --args --incognito http://127.0.0.1:8000
 ```
 
-- Open in a **Chrome Incognito** window.
+Open:
+
+- http://127.0.0.1:8000
+
+Recommended:
+
+- Open this URL in a **Chrome Incognito** window.
+- Quick command (macOS):
+  `open -na "Google Chrome" --args --incognito http://127.0.0.1:8000`
 
 ## 5. First-time macOS permissions
 
@@ -84,7 +98,11 @@ Without these, actions or screen-size/screenshot related APIs can fail.
 - Check permissions listed in section 5.
 - Confirm you are on latest local-only code.
 
-6. Unexpected SSH password prompt
+6. First OCR call is slow (or times out once)
+- This can happen on first run while Swift/Vision warms up.
+- Retry once; subsequent OCR calls are typically much faster.
+
+7. Unexpected SSH password prompt
 - This means you are likely running an older remote-enabled version.
 - Pull latest code and restart server.
 
@@ -98,7 +116,7 @@ Without these, actions or screen-size/screenshot related APIs can fail.
 
 Example prompt:
 
-`Open https://www.google.com in Chrome and then create a new tab, then move to the tab on the left, input wiki in this tab then search. On the results page, click the lowest (bottom-most) Wikipedia result visible on screen. No scrolling.`
+`Open https://www.google.com in Chrome and then create a new tab, then go to tab 1, input wiki in this tab then search. On the results page, click the lowest (bottom-most) Wikipedia result visible on screen. No scrolling.`
 
 What happens in this project:
 
