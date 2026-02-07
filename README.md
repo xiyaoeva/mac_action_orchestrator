@@ -53,12 +53,22 @@ Current code is set to local execution mode for hackathon use.
 ```bash
 source .venv/bin/activate
 uvicorn app:app --reload --port 8000
-
-Open New Terminal Window
-```bash
-Google Chrome" --args --incognito http://127.0.0.1:8000
 ```
-(Open this URL in a **Chrome Incognito** window)
+
+Open a new terminal window:
+
+```bash
+open -na "Google Chrome" --args --incognito http://127.0.0.1:8000
+```
+
+(Open this URL in a **Chrome Incognito** window.)
+
+Permission note:
+
+- On first runs, macOS may show multiple permission dialogs.
+- Grant all required permissions (Accessibility, Screen Recording, Automation) before expecting stable end-to-end runs.
+- It is normal if the first few runs fail while permissions are still being approved.
+- In general, you cannot fully pre-grant these permissions from code before running; macOS requires user approval dialogs.
 
 Prompt examples:
 
