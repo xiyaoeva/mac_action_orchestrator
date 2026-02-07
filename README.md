@@ -53,17 +53,10 @@ Current code is set to local execution mode for hackathon use.
 ```bash
 source .venv/bin/activate
 uvicorn app:app --reload --port 8000
+Google Chrome" --args --incognito http://127.0.0.1:8000
 ```
 
-Open:
-
-- http://127.0.0.1:8000
-
-Recommended:
-
 - Open this URL in a **Chrome Incognito** window.
-- Quick command (macOS):
-  `open -na "Google Chrome" --args --incognito http://127.0.0.1:8000`
 
 ## 5. First-time macOS permissions
 
