@@ -134,6 +134,55 @@ app = FastAPI(title="Mac Action Orchestrator")
 
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 
+_OCR_WARMED = False
+
+
+def warmup_vision_ocr() -> bool:
+    """
+    Warm up Swift/Vision OCR at startup.
+
+    Why this exists:
+    - The first Swift/Vision invocation can be slow on a fresh machine/session.
+    - We pay that cold-start cost during app startup so the first user click flow
+      is less likely to hit OCR timeout.
+
+    Safety:
+    - Warmup failure must never block server startup.
+    """
+    global _OCR_WARMED
+    if _OCR_WARMED:
+        return True
+    try:
+        # 1x1 transparent PNG used only to trigger the Swift/Vision pipeline.
+        warmup_png = (
+            b"\x89PNG\r\n\x1a\n"
+            b"\x00\x00\x00\rIHDR"
+            b"\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89"
+            b"\x00\x00\x00\x0bIDAT\x08\xd7c\x00\x01\x00\x00\x05\x00\x01\r\n-\xb4"
+            b"\x00\x00\x00\x00IEND\xaeB`\x82"
+        )
+        warmup_path = SCREEN_DIR / "_ocr_warmup.png"
+        warmup_path.write_bytes(warmup_png)
+        _ = vision_ocr_tokens(warmup_path)
+        _OCR_WARMED = True
+        return True
+    except Exception as e:
+        print(f"[OCR warmup] skipped: {e}")
+        return False
+    finally:
+        try:
+            warmup_path = SCREEN_DIR / "_ocr_warmup.png"
+            if warmup_path.exists():
+                warmup_path.unlink()
+        except Exception:
+            pass
+
+
+@app.on_event("startup")
+def on_startup_warmup():
+    # Best effort only; the app should still start if warmup fails.
+    warmup_vision_ocr()
+
 
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request):
@@ -1807,3 +1856,4 @@ def plan_again(req: PlanAgainRequest):
         )
     except Exception as e:
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
