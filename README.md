@@ -6,6 +6,7 @@ Local-first macOS action orchestrator with FastAPI + Uvicorn + Gemini planner.
 
 - macOS
 - Python 3.10+ (recommended: 3.11 or 3.12)
+- `pip` available
 - Apple Vision Framework (built into macOS) for OCR
 - Xcode Command Line Tools (required for `swift` runtime):
   `xcode-select --install`
@@ -74,7 +75,15 @@ You may need to allow permissions for Terminal:
 
 Without these, actions or screen-size/screenshot related APIs can fail.
 
-## 6. Common errors and fixes
+## 6. Run completion behavior:
+
+- After all actions finish, the app shows a completion dialog popup with final status and log name.
+- The full execution log is saved under `static/logs/` (for example: `static/logs/run_<timestamp>_<id>.txt`).
+- Example completion screenshot:
+
+  ![Run completion dialog](https://raw.githubusercontent.com/xiyaoeva/mac_action_orchestrator/f424361624669abd6588562116caa9120a119857/static/screenshots/EndExample.jpg)
+
+## 7. Common errors and fixes
 
 1. `source: no such file or directory: .venv/bin/activate`
 - You have not created venv yet.
@@ -105,13 +114,13 @@ Without these, actions or screen-size/screenshot related APIs can fail.
 - This means you are likely running an older remote-enabled version.
 - Pull latest code and restart server.
 
-## 7. Security notes
+## 8. Security notes
 
 - Do not commit real API keys or machine-specific secrets.
 - Keep `config.json` local and sanitized.
 - Use `config.example.json` as template for sharing.
 
-## 8. End-to-end example (planning + click logic)
+## 9. End-to-end example (planning + click logic)
 
 Example prompt:
 
