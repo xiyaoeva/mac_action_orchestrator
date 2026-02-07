@@ -63,8 +63,8 @@ Google Chrome" --args --incognito http://127.0.0.1:8000
 Prompt examples:
 
 - `Open https://www.google.com in Chrome and then create a new tab, then move to the tab on the left, input wiki in this tab then search. On the results page, click the lowest (bottom-most) Wikipedia result visible on screen. No scrolling.`
-- `Open https://www.google.com in Chrome, open a new tab, then move to the tab on the left. In that tab, type "wiki" and press Enter. Wait for the results page, then scroll twice. After scrolling, click the lowest (bottom-most) visible result that contains "Wikipedia". Do not open links in a new tab.`
-- `Open https://www.google.com in Chrome, then search for "top national parks in the U.S." and press Enter. Wait for results, scroll twice, then find entries related to "Yellowstone". Click the lowest visible Yellowstone-related result on screen. If multiple similar targets are visible, choose the bottom-most one without opening a new tab.`
+- `Open https://www.google.com in Chrome, open a new tab, then move to the tab on the left. In that tab, type "wiki" and press Enter. Wait for the results page, then scroll twice. After scrolling, click the lowest (bottom-most) visible result that contains "Wikipedia".`
+- `Open https://www.wikipedia.org in Chrome, search for "Yosemite National Park wikipedia", press Enter, wait for results, click the first visible Wikipedia result, then open the print dialog and save the page as a PDF.`
 
 ## 5. First-time macOS permissions
 
