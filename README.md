@@ -98,7 +98,7 @@ Without these, actions or screen-size/screenshot related APIs can fail.
 
 Example prompt:
 
-`Open https://www.google.com in Chrome and then create a new tab, then go to tab 1, input wiki in this tab then search. On the results page, click the lowest (bottom-most) Wikipedia result visible on screen. No scrolling.`
+`Open https://www.google.com in Chrome and then create a new tab, then move to the tab on the left, input wiki in this tab then search. On the results page, click the lowest (bottom-most) Wikipedia result visible on screen. No scrolling.`
 
 What happens in this project:
 
