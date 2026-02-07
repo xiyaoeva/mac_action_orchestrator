@@ -53,7 +53,7 @@ open -na "Google Chrome" --args --incognito http://127.0.0.1:8000
 
 ## 5. First-time macOS permissions
 
-You may need to allow permissions for Terminal/Python:
+You may need to allow permissions for Terminal:
 
 - Accessibility
 - Screen Recording
