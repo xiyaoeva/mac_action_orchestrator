@@ -4,116 +4,343 @@
   <meta charset="utf-8" />
   <title>Mac Action Orchestrator</title>
   <style>
-    body { font-family: -apple-system, system-ui; margin: 20px; }
-    textarea, input { width: 100%; font-family: ui-monospace, Menlo, monospace; }
-    .row { display: flex; gap: 16px; }
-    .col { flex: 1; }
-    .card { border: 1px solid #ddd; border-radius: 10px; padding: 12px; margin-bottom: 16px; }
-    button { padding: 8px 12px; }
-    img { max-width: 100%; border: 1px solid #eee; border-radius: 8px; }
-    pre { background: #f7f7f7; padding: 10px; border-radius: 8px; overflow-x: auto; }
+    :root {
+      --bg: #f4efe7;
+      --bg-accent: #d9efe1;
+      --ink: #182228;
+      --muted: #4f5e63;
+      --panel: #fffdf9;
+      --line: #d9d2c7;
+      --brand: #0d8d63;
+      --brand-ink: #ffffff;
+      --mono: "IBM Plex Mono", Menlo, Consolas, monospace;
+      --sans: "Space Grotesk", "Avenir Next", "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      font-family: var(--sans);
+      background:
+        radial-gradient(1200px 520px at 0% 0%, var(--bg-accent), transparent 60%),
+        radial-gradient(1000px 440px at 100% 20%, #f8dcc5, transparent 60%),
+        var(--bg);
+    }
+
+    .shell {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 28px 18px 40px;
+    }
+
+    .hero {
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: linear-gradient(135deg, #fffaf2 0%, #f6fff8 100%);
+      padding: 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 10px 22px rgba(24, 34, 40, 0.08);
+    }
+
+    .hero h1 {
+      margin: 0;
+      font-size: 32px;
+      line-height: 1.15;
+      letter-spacing: 0.3px;
+    }
+
+    .hero p {
+      margin: 10px 0 0;
+      color: var(--muted);
+      max-width: 900px;
+      line-height: 1.5;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .chip {
+      border: 1px solid #b9d8c8;
+      background: #ecfbf3;
+      color: #21543f;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+    }
+
+    .grid-top {
+      display: grid;
+      grid-template-columns: 1fr 1.35fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .grid-bottom {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 16px;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--panel);
+      padding: 14px;
+      box-shadow: 0 6px 18px rgba(24, 34, 40, 0.05);
+    }
+
+    h3 {
+      margin: 0 0 10px;
+      font-size: 19px;
+    }
+
+    .sub {
+      margin: 0 0 12px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    label {
+      display: block;
+      margin: 10px 0 6px;
+      font-size: 13px;
+      font-weight: 700;
+      color: #2a393f;
+    }
+
+    textarea, input {
+      width: 100%;
+      border-radius: 10px;
+      border: 1px solid #c8d0d3;
+      padding: 10px;
+      font-family: var(--mono);
+      background: #ffffff;
+      color: #1e2a2f;
+    }
+
+    textarea {
+      line-height: 1.45;
+      resize: vertical;
+    }
+
+    .inline {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .compact {
+      width: 120px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-family: var(--sans);
+      font-weight: 700;
+      cursor: pointer;
+      background: #dfe8ec;
+      color: #23343a;
+    }
+
+    .run-btn {
+      width: 100%;
+      background: linear-gradient(135deg, #11a36f 0%, #0f825a 100%);
+      color: var(--brand-ink);
+      padding: 12px 14px;
+      font-size: 15px;
+      letter-spacing: 0.2px;
+    }
+
+    .status-pill {
+      display: inline-block;
+      min-height: 20px;
+      padding: 2px 10px;
+      border-radius: 999px;
+      border: 1px solid #bfd5c9;
+      background: #ecfbf3;
+      color: #1b5b41;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .hint {
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .result-meta {
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .meta-label {
+      color: #30464e;
+      font-weight: 700;
+    }
+
+    pre {
+      margin: 0;
+      background: #131e24;
+      color: #d4eff9;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid #2f434d;
+      overflow-x: auto;
+      font-family: var(--mono);
+      font-size: 12px;
+      min-height: 96px;
+      max-height: 260px;
+    }
+
+    .log-link {
+      color: #0f7a59;
+      font-weight: 700;
+      text-decoration: none;
+      word-break: break-all;
+    }
+
+    .log-link:hover {
+      text-decoration: underline;
+    }
+
+    img {
+      width: 100%;
+      border: 1px solid #cad6db;
+      border-radius: 12px;
+      background: #ffffff;
+    }
+
+    .resource-list {
+      margin: 0;
+      padding-left: 18px;
+      color: #33484f;
+    }
+
+    .resource-list li {
+      margin-bottom: 8px;
+      line-height: 1.4;
+    }
+
+    @media (max-width: 980px) {
+      .grid-top,
+      .grid-bottom {
+        grid-template-columns: 1fr;
+      }
+    }
   </style>
 </head>
 <body>
-  <h2>Mac Action Orchestrator (Local)</h2>
+  <main class="shell">
+    <section class="hero">
+      <h1>Mac Action Orchestrator</h1>
+    </section>
 
-  <div class="card">
-    <h3>Run Action JSON</h3>
-    <p>
-      Cooldown seconds:
-      <input id="cooldown" type="number" step="0.1" min="0" value="5" style="width:120px;" />
-    </p>
-    <p>
-      Max plan_again (empty = unlimited):
-      <input id="max-plan-again" type="number" step="1" min="0" style="width:120px;" />
-    </p>
-    <p>Example:</p>
-    <pre>{
-  "type": "finder_about_this_mac"
-}</pre>
-
-    <textarea id="action" rows="8">{ "type": "finder_about_this_mac" }</textarea>
-    <div style="margin-top:10px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-      <button onclick="runAction()">Run</button>
-      <button onclick="capture()">Capture Screen</button>
-      <button onclick="fetchScreenSize()">Get Screen Size</button>
-      <span id="screen-size" style="color:#555;"></span>
-    </div>
-  </div>
-
-  <div class="card">
-    <h3>Gemini Planner</h3>
-    <p>Describe the task. The model returns JSON actions via function calling.</p>
-    <textarea id="plan-prompt" rows="4">打开 Chrome，访问 https://www.google.com，然后在搜索框输入 "mac action orchestrator" 并回车。</textarea>
-    <div style="margin-top:10px;">
-      <button onclick="generatePlan()">Generate Actions</button>
-    </div>
-  </div>
-
-  <div class="card">
-    <h3>Find XY (OCR)</h3>
-    <p>Find the center coordinate of a text string in a local screenshot.</p>
-    <p>
-      Screenshot path:
-      <input id="ocr-path" type="text" placeholder="/absolute/path/to/screenshot.png" />
-    </p>
-    <p>
-      Text (case-insensitive):
-      <input id="ocr-text" type="text" placeholder="Gmail" />
-    </p>
-    <div style="margin-top:10px;">
-      <button onclick="findXY()">Find XY</button>
-    </div>
-  </div>
-
-  <div class="card">
-    <h3>Annotate Targets (OCR)</h3>
-    <p>Generate a numbered image for all matching targets.</p>
-    <p>
-      Screenshot path:
-      <input id="annotate-path" type="text" placeholder="/absolute/path/to/screenshot.png" />
-    </p>
-    <p>
-      Target text (case-insensitive):
-      <input id="annotate-text" type="text" placeholder="Gmail" />
-    </p>
-    <div style="margin-top:10px;">
-      <button onclick="annotateTargets()">Generate Numbered Image</button>
-    </div>
-  </div>
-
-  <div class="card">
-    <h3>Run Actions Sequence</h3>
-    <p>Each box is an actions array. Runs in order with 5s between batches.</p>
-    <div id="actions-sequence"></div>
-    <div style="margin-top:10px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-      <button onclick="runActionsSequence()">Run Sequence</button>
-      <button id="toggle-pause-plan-again" onclick="togglePausePlanAgain()">Pause on plan_again: OFF</button>
-    </div>
-  </div>
-
-  <div class="row">
-    <div class="col card">
-      <h3>Result</h3>
-      <div style="margin-bottom:6px; color:#555;">
-        Latest Tab URL: <span id="latest-tab-url">-</span>
+    <section class="grid-top">
+      <div class="panel">
+        <h3>Session Settings</h3>
+        <p class="sub">Provide API keys and runtime controls.</p>
+        <label for="api-keys">Gemini API Keys</label>
+        <textarea id="api-keys" rows="5" placeholder="AIza..."></textarea>
+        <div class="inline">
+          <div>
+            <label for="cooldown">Cooldown (seconds)</label>
+            <input class="compact" id="cooldown" type="number" step="0.1" min="0" value="5" />
+          </div>
+          <div>
+            <label for="max-plan-again">Max plan_again</label>
+            <input class="compact" id="max-plan-again" type="number" step="1" min="0" />
+          </div>
+        </div>
+        <div class="inline" style="margin-top:12px;">
+          <button onclick="fetchScreenSize()">Get Screen Size</button>
+          <span id="screen-size" class="status-pill"></span>
+        </div>
       </div>
-      <pre id="result">-</pre>
-    </div>
-    <div class="col card">
-      <h3>Latest Screenshot</h3>
-      <img id="shot" src="" alt="(no screenshot yet)" />
-    </div>
-  </div>
+
+      <div class="panel">
+        <h3>Gemini Planner</h3>
+        <p class="sub">Describe the task.</p>
+        <label for="plan-prompt">Task Prompt</label>
+        <textarea id="plan-prompt" rows="8">Open Chrome, go to https://www.google.com, then type "mac action orchestrator" into the search box and press Enter.</textarea>
+        <div style="margin-top:12px;">
+          <button class="run-btn" onclick="runFromPlanner()">Run</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid-bottom">
+      <div class="panel">
+        <h3>Run Output</h3>
+        <pre id="result">-</pre>
+        <div class="result-meta" style="margin-top:10px;">
+          <span class="meta-label">Run Log:</span>
+          <a class="log-link" id="run-log-link" href="#" target="_blank">-</a>
+        </div>
+        <pre id="run-log">-</pre>
+      </div>
+
+      <div class="panel">
+        <h3>Latest Screenshot</h3>
+        <img id="shot" src="" alt="(no screenshot yet)" />
+        <div class="result-meta" style="margin-top:10px;">
+          Local execution is active. SSH/remote flow is intentionally disabled.
+        </div>
+      </div>
+    </section>
+  </main>
 
 <script>
 let pauseOnPlanAgain = false;
+const API_KEYS_STORAGE_KEY = "mao_api_keys";
 
 function togglePausePlanAgain() {
   pauseOnPlanAgain = !pauseOnPlanAgain;
   const btn = document.getElementById("toggle-pause-plan-again");
   if (btn) {
     btn.textContent = pauseOnPlanAgain ? "Pause on plan_again: ON" : "Pause on plan_again: OFF";
+  }
+}
+
+function readApiKeys() {
+  const el = document.getElementById("api-keys");
+  if (!el) return [];
+  const raw = el.value || "";
+  try {
+    localStorage.setItem(API_KEYS_STORAGE_KEY, raw);
+  } catch (e) {
+    // ignore storage errors
+  }
+  return raw
+    .split(/\r?\n/)
+    .flatMap((line) => line.split(","))
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith("#"));
+}
+
+function loadApiKeys() {
+  const el = document.getElementById("api-keys");
+  if (!el) return;
+  try {
+    const saved = localStorage.getItem(API_KEYS_STORAGE_KEY);
+    if (saved) {
+      el.value = saved;
+    }
+  } catch (e) {
+    // ignore storage errors
   }
 }
 
@@ -162,9 +389,44 @@ async function fetchScreenSize() {
 
 window.addEventListener("load", () => {
   fetchScreenSize();
+  loadApiKeys();
 });
 
-async function runActionsPayload(payload) {
+async function handleActionResponse(data) {
+  document.getElementById("result").textContent = JSON.stringify(data, null, 2);
+  updateLatestTabUrl(data);
+  if (data.log_url) {
+    const link = document.getElementById("run-log-link");
+    if (link) {
+      link.href = data.log_url;
+      link.textContent = data.log_url;
+    }
+    try {
+      const logRes = await fetch(data.log_url + "?t=" + Date.now());
+      if (logRes.ok) {
+        const text = await logRes.text();
+        document.getElementById("run-log").textContent = text || "-";
+      }
+    } catch (e) {
+      // ignore log fetch errors
+    }
+  }
+  if (data.screenshot_url) {
+    document.getElementById("shot").src = data.screenshot_url + "?t=" + Date.now();
+  }
+  if (data.paused && data.pause_reason === "plan_again" && data.action && data.action.prompt) {
+    await handlePlanAgainPause(data);
+  }
+  if (data.paused && data.pause_reason === "multi_target") {
+    await handleMultiTargetPause(data);
+  }
+  if (data.paused && data.pause_reason === "occlusion_recovery") {
+    await handleOcclusionRecovery(data);
+  }
+  return data;
+}
+
+async function runActionsPayload(payload, mode, logId) {
   const cooldown = readCooldown();
   const maxPlanAgain = readMaxPlanAgain();
   const contextPrompt = readContextPrompt();
@@ -176,26 +438,41 @@ async function runActionsPayload(payload) {
       cooldown_seconds: cooldown,
       max_plan_again: maxPlanAgain,
       pause_on_plan_again: pauseOnPlanAgain,
-      context_prompt: contextPrompt
+      context_prompt: contextPrompt,
+      mode: mode || "local",
+      log_id: logId || null,
+      api_keys: readApiKeys()
     })
   });
   const data = await res.json();
-  document.getElementById("result").textContent = JSON.stringify(data, null, 2);
-  updateLatestTabUrl(data);
-  if (data.screenshot_url) {
-    document.getElementById("shot").src = data.screenshot_url + "?t=" + Date.now();
-  }
-  if (data.paused && data.pause_reason === "plan_again" && data.action && data.action.prompt) {
-    await handlePlanAgainPause(data);
-  }
-  if (data.paused && data.pause_reason === "multi_target") {
-    await handleMultiTargetPause(data);
-  }
-  return data;
+  return handleActionResponse(data);
+}
+
+async function runActionsSequencePayload(batches, mode, logId) {
+  const cooldown = readCooldown();
+  const maxPlanAgain = readMaxPlanAgain();
+  const contextPrompt = readContextPrompt();
+  const res = await fetch("/api/run_actions_sequence", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({
+      batches: batches,
+      cooldown_seconds: cooldown,
+      max_plan_again: maxPlanAgain,
+      pause_on_plan_again: pauseOnPlanAgain,
+      context_prompt: contextPrompt,
+      mode: mode || "local",
+      log_id: logId || null,
+      api_keys: readApiKeys()
+    })
+  });
+  const data = await res.json();
+  return handleActionResponse(data);
 }
 
 function addActionsBox(afterEl, initialValue) {
   const container = document.getElementById("actions-sequence");
+  if (!container) return;
   const idx = container.children.length + 1;
   const wrapper = document.createElement("div");
   wrapper.style.marginBottom = "10px";
@@ -239,6 +516,7 @@ function addActionsBox(afterEl, initialValue) {
 
 function renumberBatches() {
   const container = document.getElementById("actions-sequence");
+  if (!container) return;
   Array.from(container.children).forEach((wrapper, index) => {
     const label = wrapper.querySelector("div");
     if (label && label.firstChild) {
@@ -247,28 +525,27 @@ function renumberBatches() {
   });
 }
 
-async function runActionsSequence() {
+async function runActionsSequence(mode) {
+  const execMode = mode || "local";
+  const logId = "run_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8);
   const items = document.querySelectorAll(".actions-item");
   if (!items.length) {
     alert("Add at least one batch."); return;
   }
-  const cooldown = readCooldown();
-  const delayMs = cooldown === null ? 0 : Math.max(0, cooldown * 1000);
+  const batches = [];
   for (let i = 0; i < items.length; i++) {
     let payload;
     try { payload = JSON.parse(items[i].value); } catch(e) {
       alert("Invalid JSON in batch " + (i + 1)); return;
     }
-    const data = await runActionsPayload(payload);
-    if (data && data.paused) {
-      return;
+    if (!Array.isArray(payload)) {
+      alert("Batch " + (i + 1) + " must be a JSON array."); return;
     }
-    if (data && data.ok === false) {
-      return;
-    }
-    if (delayMs > 0) {
-      await new Promise(r => setTimeout(r, delayMs));
-    }
+    batches.push(payload);
+  }
+  const data = await runActionsSequencePayload(batches, execMode, logId);
+  if (data && (data.paused || data.ok === false)) {
+    return;
   }
 }
 
@@ -307,7 +584,7 @@ async function handlePlanAgainPause(data) {
   const res = await fetch("/api/plan_again", {
     method: "POST",
     headers: {"Content-Type":"application/json"},
-    body: JSON.stringify({prompt})
+    body: JSON.stringify({prompt, api_keys: readApiKeys()})
   });
   const planData = await res.json();
   document.getElementById("result").textContent = JSON.stringify(planData, null, 2);
@@ -317,9 +594,9 @@ async function handlePlanAgainPause(data) {
     return;
   }
   if (planData.args && Array.isArray(planData.args.batches)) {
-    setActionsSequence(planData.args.batches);
     setPlanPromptValue(prompt);
-    alert("New plan generated. Click Run Sequence to execute.");
+    const logId = "run_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8);
+    await runActionsSequencePayload(planData.args.batches, "local", logId);
   }
 }
 
@@ -344,7 +621,7 @@ async function handleMultiTargetPause(data) {
   const res = await fetch("/api/choose_target", {
     method: "POST",
     headers: {"Content-Type":"application/json"},
-    body: JSON.stringify({prompt})
+    body: JSON.stringify({prompt, api_keys: readApiKeys()})
   });
   const chooseData = await res.json();
   document.getElementById("result").textContent = JSON.stringify(chooseData, null, 2);
@@ -371,6 +648,28 @@ async function handleMultiTargetPause(data) {
   }
 }
 
+async function handleOcclusionRecovery(data) {
+  if (data.screenshot_url) {
+    document.getElementById("shot").src = data.screenshot_url + "?t=" + Date.now();
+  }
+  const confirmAsk = confirm(
+    "Detected occlusion. Ask Gemini how to recover (close tab or open URL) and proceed?"
+  );
+  if (!confirmAsk) {
+    return;
+  }
+  const chooseData = await resolveOcclusionWithGemini();
+  if (!chooseData || !chooseData.ok) {
+    return;
+  }
+  const mode = chooseData.mode;
+  const confirmRun = confirm(`Gemini chose "${mode}". Execute recovery now?`);
+  if (!confirmRun) {
+    return;
+  }
+  await executeOcclusionMode(mode);
+}
+
 async function generatePlan(alreadyRetried) {
   const prompt = document.getElementById("plan-prompt").value.trim();
   if (!prompt) {
@@ -379,7 +678,7 @@ async function generatePlan(alreadyRetried) {
   const res = await fetch("/api/plan_actions", {
     method: "POST",
     headers: {"Content-Type":"application/json"},
-    body: JSON.stringify({prompt})
+    body: JSON.stringify({prompt, api_keys: readApiKeys()})
   });
   const data = await res.json();
   document.getElementById("result").textContent = JSON.stringify(data, null, 2);
@@ -390,14 +689,19 @@ async function generatePlan(alreadyRetried) {
     }
   }
   if (!data.ok && data.retryable && !alreadyRetried) {
-    alert(data.error + "\n\n格式不符合要求，请点击 Generate Actions 重新调用 Gemini。");
+    alert(data.error + "\n\nInvalid format. Please click Run to retry.");
     return;
   }
-  if (data.ok && data.args) {
-    if (Array.isArray(data.args.batches)) {
-      setActionsSequence(data.args.batches);
-    }
+  return data;
+}
+
+async function runFromPlanner() {
+  const data = await generatePlan();
+  if (!data || !data.ok || !data.args || !Array.isArray(data.args.batches)) {
+    return;
   }
+  const logId = "run_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8);
+  await runActionsSequencePayload(data.args.batches, "local", logId);
 }
 
 async function findXY() {
@@ -437,6 +741,7 @@ async function annotateTargets() {
 
 function setActionsSequence(batches) {
   const container = document.getElementById("actions-sequence");
+  if (!container) return;
   container.innerHTML = "";
   batches.forEach((batch) => {
     const value = JSON.stringify(batch, null, 2);
@@ -454,7 +759,43 @@ function updateLatestTabUrl(data) {
   el.textContent = data.latest_tab_url || "-";
 }
 
-addActionsBox();
+async function resolveOcclusionWithGemini() {
+  const res = await fetch("/api/resolve_occlusion", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({api_keys: readApiKeys()})
+  });
+  const chooseData = await res.json();
+  document.getElementById("result").textContent = JSON.stringify(chooseData, null, 2);
+  updateLatestTabUrl(chooseData);
+  if (!chooseData.ok) {
+    alert(chooseData.error || "Occlusion resolution failed.");
+    return null;
+  }
+  return chooseData;
+}
+
+async function executeOcclusionMode(mode) {
+  if (!mode) {
+    alert("No mode selected.");
+    return;
+  }
+  const execRes = await fetch("/api/execute_occlusion", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({mode})
+  });
+  const execData = await execRes.json();
+  document.getElementById("result").textContent = JSON.stringify(execData, null, 2);
+  updateLatestTabUrl(execData);
+  if (!execData.ok) {
+    alert(execData.error || "Occlusion execution failed.");
+    return;
+  }
+  return execData;
+}
+
+// Sequence editor is hidden in planner-run mode.
 </script>
 </body>
 </html>

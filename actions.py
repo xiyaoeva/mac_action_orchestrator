@@ -2,7 +2,7 @@ from pydantic import BaseModel, Field
 from typing import Literal, Optional
 
 
-# 黑客松建议：模型输出受限 JSON，你的系统再映射到脚本模板执行
+# Keep model output constrained to JSON, then map it to trusted script templates.
 ACTION_TYPES = [
     "finder_about_this_mac",
     "open_chrome",
@@ -57,20 +57,22 @@ class Action(BaseModel):
 
 
 def applescript_for_action(action: Action) -> str:
+    # Central mapping from validated action objects to AppleScript/JXA payloads.
     t = action.type
 
+    # These are planner/meta actions and must be resolved before execution.
     if t == "shortcut":
         raise ValueError("shortcut must be expanded before execution")
     if t == "plan_again":
         raise ValueError("plan_again must be expanded before execution")
 
     if t == "finder_about_this_mac":
-        # 你已验证可用
+        # Note: menu item text is locale-specific; keep current label as-is.
         return r'''
 tell application "Finder" to activate
 tell application "System Events"
   tell process "Finder"
-    set theItem to menu item "关于本机" of menu 1 of menu bar item 1 of menu bar 1
+    set theItem to menu item "About This Mac" of menu 1 of menu bar item 1 of menu bar 1
     click theItem
   end tell
 end tell
@@ -147,20 +149,39 @@ return "ok"
     if t == "click_at":
         if action.x is None or action.y is None:
             raise ValueError("click_at requires x,y")
+        # JXA block performs a native mouse move + click through Quartz APIs.
+        # It also probes Accessibility permission and emits diagnostics.
         js = (
             'ObjC.import("ApplicationServices"); '
+            "var trusted = false; "
+            "try { "
+            "  if ($.AXIsProcessTrustedWithOptions) { "
+            "    var opts = $.NSDictionary.dictionaryWithObjectForKey(true, $.kAXTrustedCheckOptionPrompt); "
+            "    trusted = $.AXIsProcessTrustedWithOptions(opts); "
+            "  } else { "
+            "    trusted = $.AXIsProcessTrusted(); "
+            "  } "
+            "} catch (e) { "
+            "  console.log(\"ACCESSIBILITY_CHECK_ERROR:\" + e); "
+            "} "
+            "if (!trusted) { console.log(\"ACCESSIBILITY_NOT_TRUSTED\"); } "
             f"var point = {{x: {action.x}, y: {action.y}}}; "
-            "var move = $.CGEventCreateMouseEvent(null, $.kCGEventMouseMoved, point, $.kCGMouseButtonLeft); "
-            "$.CGEventPost($.kCGHIDEventTap, move); "
-            "var down = $.CGEventCreateMouseEvent(null, $.kCGEventLeftMouseDown, point, $.kCGMouseButtonLeft); "
-            "$.CGEventPost($.kCGHIDEventTap, down); "
-            "var up = $.CGEventCreateMouseEvent(null, $.kCGEventLeftMouseUp, point, $.kCGMouseButtonLeft); "
-            "$.CGEventPost($.kCGHIDEventTap, up);"
+            "try { "
+            "  var move = $.CGEventCreateMouseEvent(null, $.kCGEventMouseMoved, point, $.kCGMouseButtonLeft); "
+            "  $.CGEventPost($.kCGHIDEventTap, move); "
+            "  var down = $.CGEventCreateMouseEvent(null, $.kCGEventLeftMouseDown, point, $.kCGMouseButtonLeft); "
+            "  $.CGEventPost($.kCGHIDEventTap, down); "
+            "  var up = $.CGEventCreateMouseEvent(null, $.kCGEventLeftMouseUp, point, $.kCGMouseButtonLeft); "
+            "  $.CGEventPost($.kCGHIDEventTap, up); "
+            "  console.log(\"CLICK_OK\"); "
+            "} catch (e) { "
+            "  console.log(\"CLICK_ERROR:\" + e); "
+            "}"
         )
         cmd = f"/usr/bin/osascript -l JavaScript -e '{js}'".replace('"', '\\"')
         return f'''
-do shell script "{cmd}"
-return "ok"
+set output to do shell script "{cmd}"
+return output
 '''
 
     raise ValueError(f"Unsupported action type: {t}")
