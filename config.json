@@ -3,5 +3,5 @@
   "user": "local",
   "remote_tmp_screen_path": "/tmp/agent_screen.png",
   "ssh_options": [],
-  "rate_limit_seconds": 5
+  "rate_limit_seconds": 2
 }
