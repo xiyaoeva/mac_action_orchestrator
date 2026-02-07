@@ -42,7 +42,7 @@ Use local-safe config - By default, no setting is required.:
   "user": "local",
   "remote_tmp_screen_path": "/tmp/agent_screen.png",
   "ssh_options": [],
-  "rate_limit_seconds": 3
+  "rate_limit_seconds": 2
 }
 ```
 
