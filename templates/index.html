@@ -162,6 +162,12 @@
       letter-spacing: 0.2px;
     }
 
+    .run-btn[disabled] {
+      opacity: 0.6;
+      cursor: not-allowed;
+      filter: grayscale(0.2);
+    }
+
     .status-pill {
       display: inline-block;
       min-height: 20px;
@@ -277,7 +283,7 @@
         <label for="plan-prompt">Task Prompt</label>
         <textarea id="plan-prompt" rows="8">Open Chrome, go to https://www.google.com, then type "mac action orchestrator" into the search box and press Enter.</textarea>
         <div style="margin-top:12px;">
-          <button class="run-btn" onclick="runFromPlanner()">Run</button>
+          <button id="planner-run-btn" class="run-btn" onclick="runFromPlanner()">Run</button>
         </div>
       </div>
     </section>
@@ -696,12 +702,27 @@ async function generatePlan(alreadyRetried) {
 }
 
 async function runFromPlanner() {
-  const data = await generatePlan();
-  if (!data || !data.ok || !data.args || !Array.isArray(data.args.batches)) {
+  const runBtn = document.getElementById("planner-run-btn");
+  if (runBtn && runBtn.disabled) {
     return;
   }
-  const logId = "run_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8);
-  await runActionsSequencePayload(data.args.batches, "local", logId);
+  if (runBtn) {
+    runBtn.disabled = true;
+    runBtn.textContent = "Start acting... Please wait";
+  }
+  try {
+    const data = await generatePlan();
+    if (!data || !data.ok || !data.args || !Array.isArray(data.args.batches)) {
+      return;
+    }
+    const logId = "run_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8);
+    await runActionsSequencePayload(data.args.batches, "local", logId);
+  } finally {
+    if (runBtn) {
+      runBtn.disabled = false;
+      runBtn.textContent = "Run";
+    }
+  }
 }
 
 async function findXY() {
@@ -799,3 +820,4 @@ async function executeOcclusionMode(mode) {
 </script>
 </body>
 </html>
+
