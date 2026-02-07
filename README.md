@@ -27,14 +27,14 @@ In project root:
 cd /path/to/mac-action-orchestrator
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements.txt --index-url https://pypi.org/
 ```
 
 If you copied this project and `.venv` did not exist before, creating it is expected.
 
 ## 3. Config
 
-Use local-safe config:
+Use local-safe config - By default, no setting is required.:
 
 ```json
 {
@@ -42,7 +42,7 @@ Use local-safe config:
   "user": "local",
   "remote_tmp_screen_path": "/tmp/agent_screen.png",
   "ssh_options": [],
-  "rate_limit_seconds": 5
+  "rate_limit_seconds": 3
 }
 ```
 
@@ -53,10 +53,19 @@ Current code is set to local execution mode for hackathon use.
 ```bash
 source .venv/bin/activate
 uvicorn app:app --reload --port 8000
+
+Open New Terminal Window
+```bash
 Google Chrome" --args --incognito http://127.0.0.1:8000
 ```
+(Open this URL in a **Chrome Incognito** window)
 
-- Open this URL in a **Chrome Incognito** window.
+Prompt examples:
+
+- `Open https://www.google.com in Chrome and then create a new tab, then move to the tab on the left, input wiki in this tab then search. On the results page, click the lowest (bottom-most) Wikipedia result visible on screen. No scrolling.`
+- `Open https://www.google.com in Chrome, open a new tab, then move to the tab on the left. In that tab, type "wiki" and press Enter. Wait for the results page, then scroll twice. After scrolling, click the lowest (bottom-most) visible result that contains "Wikipedia". Do not open links in a new tab.`
+- `Open https://www.google.com in Chrome, then search for "top national parks in the U.S." and press Enter. Wait for results, scroll twice, then find entries related to "Yellowstone". Click the lowest visible Yellowstone-related result on screen. If multiple similar targets are visible, choose the bottom-most one without opening a new tab.`
+
 
 ## 5. First-time macOS permissions
 
@@ -117,7 +126,7 @@ Without these, actions or screen-size/screenshot related APIs can fail.
 
 Example prompt:
 
-`Open https://www.google.com in Chrome and then create a new tab, then go to tab 1, input wiki in this tab then search. On the results page, click the lowest (bottom-most) Wikipedia result visible on screen. No scrolling.`
+`Open https://www.google.com in Chrome and then create a new tab, then move to the tab on the left, input wiki in this tab then search. On the results page, click the lowest (bottom-most) Wikipedia result visible on screen. No scrolling.`
 
 What happens in this project:
 
