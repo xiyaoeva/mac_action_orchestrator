@@ -52,6 +52,12 @@ Open:
 
 - http://127.0.0.1:8000
 
+Recommended:
+
+- Open this URL in a **Chrome Incognito** window.
+- Quick command (macOS):
+  `open -na "Google Chrome" --args --incognito http://127.0.0.1:8000`
+
 ## 5. First-time macOS permissions
 
 You may need to allow permissions for Terminal/Python:
@@ -137,3 +143,4 @@ Tips for better reliability with this type of prompt:
 - Include constraints like `No scrolling`, `visible on screen`, `bottom-most`.
 - Keep target text explicit (`Wikipedia result`) rather than vague (`click that one`).
 - If there are repeated labels, include nearby context in prompt (for example: “in search results list, not top nav”).
+
