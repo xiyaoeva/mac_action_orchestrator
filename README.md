@@ -48,12 +48,6 @@ source .venv/bin/activate
 uvicorn app:app --reload --port 8000
 ```
 
-Open:
-
-- http://127.0.0.1:8000
-
-Recommended:
-
 - Open this URL in a **Chrome Incognito** window.
 - Quick command (macOS):
   `open -na "Google Chrome" --args --incognito http://127.0.0.1:8000`
