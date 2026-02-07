@@ -18,6 +18,10 @@ Main capabilities:
 - Executes actions locally through AppleScript/JXA.
 - Captures run artifacts (screenshots and logs).
 - Uses OCR + visual grounding for click decisions.
+  
+  ![Auto-detect on-screen target candidates (1)](https://raw.githubusercontent.com/xiyaoeva/mac_action_orchestrator/main/static/annotations/auto-detects%20on-screen%20target%20candidates-1.png)
+  
+  ![Auto-detect on-screen target candidates (2)](https://raw.githubusercontent.com/xiyaoeva/mac_action_orchestrator/54fb36f7afda34d8154f7008763ffc9038681b02/static/annotations/auto-detects%20on-screen%20target%20candidates-2.png)
 - Handles ambiguity with candidate annotation and re-selection.
 - Supports recovery loops (`plan_again`) for uncertain states.
 
@@ -104,3 +108,4 @@ That design choice made the system much more resilient for real browser tasks.
 - Improve visual grounding with richer spatial reasoning over multi-step screens.
 - Introduce automated validation loops for each planned step.
 - Make recovery policies more adaptive based on failure patterns.
+
