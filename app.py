@@ -234,6 +234,19 @@ def on_startup_warmup():
     warmup_vision_ocr()
 
 
+@app.post("/api/warmup_ocr")
+def warmup_ocr():
+    """
+    Best-effort OCR warmup endpoint for Run flow.
+    Safe to call repeatedly; returns quickly once already warmed.
+    """
+    try:
+        ok = warmup_vision_ocr()
+        return JSONResponse({"ok": ok, "warmed": bool(_OCR_WARMED)})
+    except Exception as e:
+        return JSONResponse({"ok": False, "warmed": bool(_OCR_WARMED), "error": str(e)})
+
+
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request):
     return TEMPLATES.TemplateResponse("index.html", {"request": request})
@@ -824,34 +837,57 @@ class ExecuteOcclusionRequest(BaseModel):
     mode: str
 
 
-class OpenPermissionSettingsRequest(BaseModel):
-    targets: Optional[List[str]] = None
+def _probe_screen_recording(timeout: int = 8) -> Dict[str, Any]:
+    probe_path = SCREEN_DIR / "_warmup_screen.png"
+    try:
+        subprocess.run(
+            ["screencapture", "-x", str(probe_path)],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+        ok = probe_path.exists() and probe_path.stat().st_size > 0
+        return {
+            "ok": bool(ok),
+            "returncode": 0 if ok else 1,
+            "stdout": "",
+            "stderr": "" if ok else "screencapture produced no output.",
+        }
+    except subprocess.CalledProcessError as e:
+        return {
+            "ok": False,
+            "returncode": e.returncode,
+            "stdout": (e.stdout or "").strip(),
+            "stderr": (e.stderr or "").strip(),
+        }
+    except Exception as e:
+        return {"ok": False, "returncode": -1, "stdout": "", "stderr": str(e)}
+    finally:
+        try:
+            if probe_path.exists():
+                probe_path.unlink()
+        except Exception:
+            pass
 
 
 def _probe_click_accessibility(timeout: int = 8) -> Dict[str, Any]:
-    """
-    Trigger Accessibility permission flow by executing a real click action.
-    """
-    # Use a tiny coordinate near top-left; goal is permission wakeup, not UI interaction.
     action = Action(type="click_at", x=5, y=5)
     script = applescript_for_action(action)
     rc, out, err = local_executor.run_osascript(script, timeout=timeout, rate_limit_seconds=0)
     stdout = (out or "").strip()
     stderr = (err or "").strip()
     blocked = "ACCESSIBILITY_NOT_TRUSTED" in stdout or "not allowed" in stderr.lower()
-    ok = rc == 0 and ("CLICK_OK" in stdout) and not blocked
+    ok = rc == 0 and "CLICK_OK" in stdout and not blocked
     return {"ok": ok, "returncode": rc, "stdout": stdout, "stderr": stderr}
 
 
 def _probe_shortcut_accessibility(timeout: int = 8) -> Dict[str, Any]:
-    """
-    Trigger keyboard automation path by sending a real modifier key press/release.
-    """
     press = applescript_for_action(Action(type="press_key", key_code=56))
     release = applescript_for_action(Action(type="release_key", key_code=56))
     rc1, out1, err1 = local_executor.run_osascript(press, timeout=timeout, rate_limit_seconds=0)
     rc2, out2, err2 = local_executor.run_osascript(release, timeout=timeout, rate_limit_seconds=0)
-    ok = (rc1 == 0 and rc2 == 0)
+    ok = rc1 == 0 and rc2 == 0
     return {
         "ok": ok,
         "returncode": 0 if ok else (rc1 if rc1 != 0 else rc2),
@@ -863,7 +899,7 @@ def _probe_shortcut_accessibility(timeout: int = 8) -> Dict[str, Any]:
 def _probe_screen_size(timeout: int = 8) -> Dict[str, Any]:
     size, stdout, stderr, rc = local_executor.get_screen_size_debug(timeout=timeout, rate_limit_seconds=0)
     ok = bool(size and size[0] > 0 and size[1] > 0)
-    payload = {"ok": ok, "returncode": rc, "stdout": stdout, "stderr": stderr}
+    payload: Dict[str, Any] = {"ok": ok, "returncode": rc, "stdout": stdout, "stderr": stderr}
     if size:
         payload["size"] = {"width": size[0], "height": size[1]}
     return payload
@@ -892,193 +928,36 @@ def screen_size():
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
 
-def _run_local_osascript_probe(script: str, timeout: int = 8) -> Dict[str, Any]:
-    proc = subprocess.run(
-        ["osascript", "-e", script],
-        capture_output=True,
-        text=True,
-        timeout=timeout,
-    )
-    return {
-        "ok": proc.returncode == 0,
-        "returncode": proc.returncode,
-        "stdout": (proc.stdout or "").strip(),
-        "stderr": (proc.stderr or "").strip(),
-    }
-
-
-def _probe_screen_recording(timeout: int = 8) -> Dict[str, Any]:
-    probe_path = SCREEN_DIR / "_permission_probe_screen.png"
-    try:
-        subprocess.run(
-            ["screencapture", "-x", str(probe_path)],
-            check=True,
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-        )
-        exists = probe_path.exists() and probe_path.stat().st_size > 0
-        return {
-            "ok": bool(exists),
-            "returncode": 0 if exists else 1,
-            "stdout": "",
-            "stderr": "" if exists else "screencapture produced empty output file.",
-        }
-    except subprocess.CalledProcessError as e:
-        return {
-            "ok": False,
-            "returncode": e.returncode,
-            "stdout": (e.stdout or "").strip(),
-            "stderr": (e.stderr or "").strip(),
-        }
-    except Exception as e:
-        return {
-            "ok": False,
-            "returncode": -1,
-            "stdout": "",
-            "stderr": str(e),
-        }
-    finally:
-        try:
-            if probe_path.exists():
-                probe_path.unlink()
-        except Exception:
-            pass
-
-
-@app.post("/api/preflight_permissions")
-def preflight_permissions():
-    """
-    Trigger/check required local macOS permissions before a run.
-
-    Note:
-    - macOS controls permission prompts; this endpoint can only trigger checks.
-    - Once granted, checks should pass without showing dialogs again.
-    """
+@app.post("/api/warmup_permissions")
+def warmup_permissions():
     checks: List[Dict[str, Any]] = []
-
-    # Screen Recording is needed for screenshots and OCR pipelines.
-    screen_probe = _probe_screen_recording()
-    checks.append(
-        {
-            "code": "screen_recording",
-            "label": "Screen Recording",
-            **screen_probe,
-        }
-    )
-
-    # System Events control may require Accessibility + Automation approval.
-    sys_events_probe = _run_local_osascript_probe(
-        'tell application "System Events" to get name of first process'
-    )
-    checks.append(
-        {
-            "code": "system_events_control",
-            "label": "Accessibility / Automation (System Events)",
-            **sys_events_probe,
-        }
-    )
-
-    # Chrome automation permission is required for browser actions.
-    chrome_probe = _run_local_osascript_probe(
-        'tell application "Google Chrome" to get (count of windows)'
-    )
-    checks.append(
-        {
-            "code": "chrome_automation",
-            "label": "Automation (Google Chrome)",
-            **chrome_probe,
-        }
-    )
-
+    probes = [
+        ("screen_recording", "screenshot", _probe_screen_recording),
+        ("click_accessibility", "click", _probe_click_accessibility),
+        ("shortcut_accessibility", "shortcut", _probe_shortcut_accessibility),
+        ("system_events_control", "screen_size", _probe_screen_size),
+    ]
+    for code, label, fn in probes:
+        try:
+            result = fn()
+        except Exception as e:
+            result = {"ok": False, "returncode": -1, "stdout": "", "stderr": str(e)}
+        checks.append({"code": code, "label": label, **result})
     missing = [
-        {"code": c["code"], "label": c["label"], "error": c.get("stderr") or c.get("stdout") or ""}
+        {
+            "code": c["code"],
+            "label": c["label"],
+            "error": c.get("stderr") or c.get("stdout") or "",
+        }
         for c in checks
         if not c.get("ok")
     ]
     return JSONResponse(
         {
             "ok": len(missing) == 0,
-            "missing": missing,
             "checks": checks,
-            "message": (
-                "All permission checks passed."
-                if not missing
-                else "Some permissions are missing. Approve system dialogs, then click Run again."
-            ),
-        }
-    )
-
-
-@app.post("/api/warmup_permissions")
-def warmup_permissions():
-    """
-    Sequential permission warmup/probe for Start flow.
-
-    Strategy:
-    - Probe one capability at a time in execution order.
-    - Return immediately at first missing permission so prompts are handled one-by-one.
-    """
-    checks: List[Dict[str, Any]] = []
-    probes = [
-        ("screen_recording", "Screen Recording (screenshot warmup)", _probe_screen_recording),
-        ("click_accessibility", "Accessibility (click warmup)", _probe_click_accessibility),
-        ("shortcut_accessibility", "Accessibility (shortcut warmup)", _probe_shortcut_accessibility),
-        ("system_events_control", "Automation (System Events / screen size warmup)", _probe_screen_size),
-        ("chrome_automation", "Automation (Google Chrome)", lambda: _run_local_osascript_probe(
-            'tell application "Google Chrome" to get (count of windows)'
-        )),
-    ]
-    for code, label, fn in probes:
-        result = fn()
-        check = {"code": code, "label": label, **result}
-        checks.append(check)
-        if not check.get("ok"):
-            return JSONResponse(
-                {
-                    "ok": False,
-                    "missing": [
-                        {
-                            "code": code,
-                            "label": label,
-                            "error": check.get("stderr") or check.get("stdout") or "",
-                        }
-                    ],
-                    "checks": checks,
-                    "message": "Permission warmup blocked at first missing capability.",
-                }
-            )
-    return JSONResponse({"ok": True, "missing": [], "checks": checks, "message": "Permission warmup passed."})
-
-
-@app.post("/api/open_permission_settings")
-def open_permission_settings(req: OpenPermissionSettingsRequest):
-    """
-    Open macOS Privacy settings pages for missing permissions.
-    """
-    uri_map = {
-        "screen_recording": "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture",
-        "system_events_control": "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility",
-        "chrome_automation": "x-apple.systempreferences:com.apple.preference.security?Privacy_Automation",
-    }
-    targets = req.targets or list(uri_map.keys())
-    opened: List[str] = []
-    failed: List[Dict[str, str]] = []
-    for target in targets:
-        uri = uri_map.get(target)
-        if not uri:
-            failed.append({"target": target, "error": "unknown target"})
-            continue
-        try:
-            subprocess.run(["open", uri], check=True, capture_output=True, text=True, timeout=6)
-            opened.append(target)
-        except Exception as e:
-            failed.append({"target": target, "error": str(e)})
-    return JSONResponse(
-        {
-            "ok": len(failed) == 0,
-            "opened": opened,
-            "failed": failed,
+            "missing": missing,
+            "message": "warmup ok" if not missing else "warmup has failures",
         }
     )
 
