@@ -289,7 +289,12 @@ def warmup_ocr():
 
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request):
-    return TEMPLATES.TemplateResponse("index.html", {"request": request})
+    response = TEMPLATES.TemplateResponse("index.html", {"request": request})
+    # Avoid stale UI when iterating quickly on templates.
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
 
 
 def new_screen_path() -> Path:
@@ -1670,6 +1675,17 @@ def build_action_function_declarations(
             },
         },
         {
+            "name": "wait",
+            "description": "Wait for a number of seconds before next action.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "seconds": {"type": "number", "minimum": 0},
+                },
+                "required": ["seconds"],
+            },
+        },
+        {
             "name": "click_at",
             "description": "Click a UI element by target description. Do not return coordinates.",
             "parameters": click_at_params,
@@ -1700,6 +1716,7 @@ def planner_system_prompt() -> str:
         "- click_at must include target and must NOT include x/y.\n"
         "- press_enter has no parameters.\n"
         "- scroll_page has no parameters.\n"
+        "- wait must include seconds (>= 0).\n"
         "- type_text must include text.\n"
         "- If you need a screenshot to continue (e.g., click a specific UI element after a page loads), "
         "call plan_again with the remaining instruction in prompt.\n"
@@ -1888,6 +1905,8 @@ def tool_calls_to_batches(
             action = {"type": "press_enter"}
         elif name == "scroll_page":
             action = {"type": "scroll_page"}
+        elif name == "wait":
+            action = {"type": "wait", "seconds": args.get("seconds")}
         elif name == "click_at":
             action = {"type": "click_at", "target": args.get("target")}
         elif name == "plan_again":
@@ -1990,6 +2009,15 @@ def validate_planner_args(
             extra_keys = set(action.keys()) - {"type"}
             if extra_keys:
                 return f"Invalid batch {i}: scroll_page has invalid fields {sorted(extra_keys)}."
+        if action_type == "wait":
+            seconds = action.get("seconds")
+            if not isinstance(seconds, (int, float)):
+                return f"Invalid batch {i}: wait requires numeric seconds."
+            if seconds < 0:
+                return f"Invalid batch {i}: wait requires seconds >= 0."
+            extra_keys = set(action.keys()) - {"type", "seconds"}
+            if extra_keys:
+                return f"Invalid batch {i}: wait has invalid fields {sorted(extra_keys)}."
         if action_type == "plan_again":
             if not isinstance(action.get("prompt"), str):
                 return f"Invalid batch {i}: plan_again requires prompt."
