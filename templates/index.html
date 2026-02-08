@@ -729,11 +729,11 @@ async function preflightPermissions() {
   if (missing.length) {
     const first = missing[0];
     alert(
-      `Permission warmup stopped at: ${first.label}\n\n` +
+      `Real-action warmup stopped at: ${first.label}\n\n` +
       `Grant permission to Terminal/iTerm for this capability, then click "Run" again.`
     );
   } else {
-    alert("Permission warmup failed. Grant required macOS permissions, then click Run again.");
+    alert("Real-action warmup failed. Grant required macOS permissions, then click Run again.");
   }
   return false;
 }
