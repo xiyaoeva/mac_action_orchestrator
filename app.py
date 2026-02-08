@@ -830,48 +830,34 @@ class OpenPermissionSettingsRequest(BaseModel):
 
 def _probe_click_accessibility(timeout: int = 8) -> Dict[str, Any]:
     """
-    Trigger Accessibility permission prompt via AX trust check (no actual click event).
+    Trigger Accessibility permission flow by executing a real click action.
     """
-    jxa = (
-        'ObjC.import("ApplicationServices"); '
-        "var trusted = false; "
-        "try { "
-        "  if ($.AXIsProcessTrustedWithOptions) { "
-        "    var opts = $.NSDictionary.dictionaryWithObjectForKey(true, $.kAXTrustedCheckOptionPrompt); "
-        "    trusted = $.AXIsProcessTrustedWithOptions(opts); "
-        "  } else { "
-        "    trusted = $.AXIsProcessTrusted(); "
-        "  } "
-        "} catch (e) { "
-        "  console.log('ACCESSIBILITY_CHECK_ERROR:' + e); "
-        "} "
-        "console.log(trusted ? 'ACCESSIBILITY_TRUSTED' : 'ACCESSIBILITY_NOT_TRUSTED');"
-    )
-    proc = subprocess.run(
-        ["osascript", "-l", "JavaScript", "-e", jxa],
-        capture_output=True,
-        text=True,
-        timeout=timeout,
-    )
-    out = (proc.stdout or "").strip()
-    err = (proc.stderr or "").strip()
-    ok = proc.returncode == 0 and "ACCESSIBILITY_TRUSTED" in out
-    return {"ok": ok, "returncode": proc.returncode, "stdout": out, "stderr": err}
+    # Use a tiny coordinate near top-left; goal is permission wakeup, not UI interaction.
+    action = Action(type="click_at", x=5, y=5)
+    script = applescript_for_action(action)
+    rc, out, err = local_executor.run_osascript(script, timeout=timeout, rate_limit_seconds=0)
+    stdout = (out or "").strip()
+    stderr = (err or "").strip()
+    blocked = "ACCESSIBILITY_NOT_TRUSTED" in stdout or "not allowed" in stderr.lower()
+    ok = rc == 0 and ("CLICK_OK" in stdout) and not blocked
+    return {"ok": ok, "returncode": rc, "stdout": stdout, "stderr": stderr}
 
 
 def _probe_shortcut_accessibility(timeout: int = 8) -> Dict[str, Any]:
     """
-    Trigger keyboard automation path (System Events key down/up).
+    Trigger keyboard automation path by sending a real modifier key press/release.
     """
-    script = r'''
-tell application "System Events"
-  key down 56
-  key up 56
-end tell
-return "ok"
-'''
-    rc, out, err = local_executor.run_osascript(script, timeout=timeout, rate_limit_seconds=0)
-    return {"ok": rc == 0, "returncode": rc, "stdout": out, "stderr": err}
+    press = applescript_for_action(Action(type="press_key", key_code=56))
+    release = applescript_for_action(Action(type="release_key", key_code=56))
+    rc1, out1, err1 = local_executor.run_osascript(press, timeout=timeout, rate_limit_seconds=0)
+    rc2, out2, err2 = local_executor.run_osascript(release, timeout=timeout, rate_limit_seconds=0)
+    ok = (rc1 == 0 and rc2 == 0)
+    return {
+        "ok": ok,
+        "returncode": 0 if ok else (rc1 if rc1 != 0 else rc2),
+        "stdout": "\n".join([x for x in [out1, out2] if x]),
+        "stderr": "\n".join([x for x in [err1, err2] if x]),
+    }
 
 
 def _probe_screen_size(timeout: int = 8) -> Dict[str, Any]:
@@ -1035,10 +1021,10 @@ def warmup_permissions():
     """
     checks: List[Dict[str, Any]] = []
     probes = [
-        ("system_events_control", "Accessibility / Automation (System Events)", _probe_screen_size),
-        ("screen_recording", "Screen Recording", _probe_screen_recording),
+        ("screen_recording", "Screen Recording (screenshot warmup)", _probe_screen_recording),
         ("click_accessibility", "Accessibility (click warmup)", _probe_click_accessibility),
         ("shortcut_accessibility", "Accessibility (shortcut warmup)", _probe_shortcut_accessibility),
+        ("system_events_control", "Automation (System Events / screen size warmup)", _probe_screen_size),
         ("chrome_automation", "Automation (Google Chrome)", lambda: _run_local_osascript_probe(
             'tell application "Google Chrome" to get (count of windows)'
         )),
