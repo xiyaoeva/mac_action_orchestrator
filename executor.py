@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import List, Optional, Tuple
 import time
 import re
+import threading
 
 
 @dataclass
@@ -19,6 +20,56 @@ class RemoteMacExecutor:
     def __init__(self, cfg: RemoteConfig):
         self.cfg = cfg
         self._last_exec_ts: float = 0.0
+        self._proc_lock = threading.Lock()
+        self._active_proc: Optional[subprocess.Popen] = None
+
+    def _set_active_proc(self, proc: Optional[subprocess.Popen]):
+        with self._proc_lock:
+            self._active_proc = proc
+
+    def cancel_active(self):
+        with self._proc_lock:
+            proc = self._active_proc
+        if not proc or proc.poll() is not None:
+            return
+        try:
+            proc.terminate()
+            proc.wait(timeout=0.5)
+        except Exception:
+            try:
+                proc.kill()
+            except Exception:
+                pass
+
+    def _run_command(
+        self,
+        cmd: List[str],
+        *,
+        input_text: Optional[str] = None,
+        timeout: Optional[int] = None,
+        check: bool = False,
+    ) -> subprocess.CompletedProcess:
+        proc = subprocess.Popen(
+            cmd,
+            stdin=subprocess.PIPE if input_text is not None else None,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        self._set_active_proc(proc)
+        try:
+            stdout, stderr = proc.communicate(input=input_text, timeout=timeout)
+        except subprocess.TimeoutExpired:
+            self.cancel_active()
+            raise
+        finally:
+            with self._proc_lock:
+                if self._active_proc is proc:
+                    self._active_proc = None
+        cp = subprocess.CompletedProcess(cmd, proc.returncode, stdout, stderr)
+        if check and cp.returncode != 0:
+            raise subprocess.CalledProcessError(cp.returncode, cmd, output=cp.stdout, stderr=cp.stderr)
+        return cp
 
     def _ssh_base(self) -> List[str]:
         opts = self._expand_ssh_options(self.cfg.ssh_options or [])
@@ -61,11 +112,9 @@ class RemoteMacExecutor:
         """
         self._rate_limit(rate_limit_seconds)
 
-        proc = subprocess.run(
+        proc = self._run_command(
             [*self._ssh_base(), "osascript"],
-            input=script,
-            text=True,
-            capture_output=True,
+            input_text=script,
             timeout=timeout,
         )
         return proc.returncode, proc.stdout.strip(), proc.stderr.strip()
@@ -84,7 +133,7 @@ class RemoteMacExecutor:
 
         remote = self.cfg.remote_tmp_screen_path
         # 1) Remote screenshot
-        subprocess.run(
+        self._run_command(
             [*self._ssh_base(), f"screencapture -x {remote}"],
             check=True,
             timeout=timeout,
@@ -101,13 +150,13 @@ class RemoteMacExecutor:
 
         scp_cmd.extend([f"{self.cfg.user}@{self.cfg.host}:{remote}", str(local_path)])
 
-        subprocess.run(
+        self._run_command(
             scp_cmd,
             check=True,
             timeout=timeout,
         )
         # Best-effort cleanup on remote after successful transfer.
-        subprocess.run(
+        self._run_command(
             [*self._ssh_base(), f"rm -f {remote}"],
             timeout=timeout,
         )
@@ -123,10 +172,8 @@ class RemoteMacExecutor:
         """
         self._rate_limit(rate_limit_seconds)
         script = 'osascript -e \'tell application "Finder" to get bounds of window of desktop\''
-        proc = subprocess.run(
+        proc = self._run_command(
             [*self._ssh_base(), script],
-            capture_output=True,
-            text=True,
             timeout=timeout,
         )
         size: Optional[Tuple[int, int]] = None
@@ -160,6 +207,56 @@ class LocalMacExecutor:
     def __init__(self, rate_limit_seconds: float = 5.0):
         self.rate_limit_seconds = rate_limit_seconds
         self._last_exec_ts: float = 0.0
+        self._proc_lock = threading.Lock()
+        self._active_proc: Optional[subprocess.Popen] = None
+
+    def _set_active_proc(self, proc: Optional[subprocess.Popen]):
+        with self._proc_lock:
+            self._active_proc = proc
+
+    def cancel_active(self):
+        with self._proc_lock:
+            proc = self._active_proc
+        if not proc or proc.poll() is not None:
+            return
+        try:
+            proc.terminate()
+            proc.wait(timeout=0.5)
+        except Exception:
+            try:
+                proc.kill()
+            except Exception:
+                pass
+
+    def _run_command(
+        self,
+        cmd: List[str],
+        *,
+        input_text: Optional[str] = None,
+        timeout: Optional[int] = None,
+        check: bool = False,
+    ) -> subprocess.CompletedProcess:
+        proc = subprocess.Popen(
+            cmd,
+            stdin=subprocess.PIPE if input_text is not None else None,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        self._set_active_proc(proc)
+        try:
+            stdout, stderr = proc.communicate(input=input_text, timeout=timeout)
+        except subprocess.TimeoutExpired:
+            self.cancel_active()
+            raise
+        finally:
+            with self._proc_lock:
+                if self._active_proc is proc:
+                    self._active_proc = None
+        cp = subprocess.CompletedProcess(cmd, proc.returncode, stdout, stderr)
+        if check and cp.returncode != 0:
+            raise subprocess.CalledProcessError(cp.returncode, cmd, output=cp.stdout, stderr=cp.stderr)
+        return cp
 
     def _rate_limit(self, rate_limit_seconds: Optional[float] = None):
         seconds = self.rate_limit_seconds if rate_limit_seconds is None else rate_limit_seconds
@@ -183,11 +280,9 @@ class LocalMacExecutor:
         Script is passed through stdin to avoid shell quoting issues.
         """
         self._rate_limit(rate_limit_seconds)
-        proc = subprocess.run(
+        proc = self._run_command(
             ["osascript"],
-            input=script,
-            text=True,
-            capture_output=True,
+            input_text=script,
             timeout=timeout,
         )
         return proc.returncode, proc.stdout.strip(), proc.stderr.strip()
@@ -203,7 +298,7 @@ class LocalMacExecutor:
         """
         self._rate_limit(rate_limit_seconds)
         local_path.parent.mkdir(parents=True, exist_ok=True)
-        subprocess.run(
+        self._run_command(
             ["screencapture", "-x", str(local_path)],
             check=True,
             timeout=timeout,
@@ -220,10 +315,8 @@ class LocalMacExecutor:
         """
         self._rate_limit(rate_limit_seconds)
         script = 'tell application "Finder" to get bounds of window of desktop'
-        proc = subprocess.run(
+        proc = self._run_command(
             ["osascript", "-e", script],
-            capture_output=True,
-            text=True,
             timeout=timeout,
         )
         size: Optional[Tuple[int, int]] = None
