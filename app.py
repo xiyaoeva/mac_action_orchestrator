@@ -1250,6 +1250,14 @@ def run_action(action: Action, cooldown_seconds: Optional[float] = None):
 @app.post("/api/stop_run")
 def stop_run():
     active = request_run_stop()
+    try:
+        local_executor.cancel_active()
+    except Exception:
+        pass
+    try:
+        executor.cancel_active()
+    except Exception:
+        pass
     return JSONResponse({
         "ok": True,
         "stop_requested": True,
