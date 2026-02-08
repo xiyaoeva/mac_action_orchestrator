@@ -263,6 +263,12 @@
         grid-template-columns: 1fr;
       }
     }
+
+    .settings-guide-link {
+      color: #0f7a59;
+      font-weight: 700;
+      text-decoration: underline;
+    }
   </style>
 </head>
 <body>
@@ -273,7 +279,10 @@
 
     <section class="grid-top">
       <div class="panel">
-        <h3>Session Settings</h3>
+        <div class="inline" style="justify-content:space-between;">
+          <h3 style="margin:0;">Session Settings</h3>
+          <a class="settings-guide-link" href="https://docs.google.com/document/d/1iAPZq1aGQyLF7jpY-fye3rQRxDQVX5VCJIG8thkapnE/edit?usp=sharing" target="_blank" rel="noopener">Open Permission Guide</a>
+        </div>
         <p class="sub">Provide API keys and runtime controls.</p>
         <label for="api-keys">Gemini API Keys</label>
         <textarea id="api-keys" rows="5" placeholder="AIza..."></textarea>
@@ -722,20 +731,17 @@ async function preflightPermissions() {
   const res = await fetch("/api/warmup_permissions", {method: "POST"});
   const data = await res.json();
   document.getElementById("result").textContent = JSON.stringify(data, null, 2);
-  if (data.ok) {
-    return true;
+  return !!data.ok;
+}
+
+async function warmupOCR() {
+  try {
+    const res = await fetch("/api/warmup_ocr", {method: "POST"});
+    const data = await res.json();
+    return !!data.ok;
+  } catch (e) {
+    return false;
   }
-  const missing = Array.isArray(data.missing) ? data.missing : [];
-  if (missing.length) {
-    const first = missing[0];
-    alert(
-      `Real-action warmup stopped at: ${first.label}\n\n` +
-      `Grant permission to Terminal/iTerm for this capability, then click "Run" again.`
-    );
-  } else {
-    alert("Real-action warmup failed. Grant required macOS permissions, then click Run again.");
-  }
-  return false;
 }
 
 async function runFromPlanner() {
@@ -746,23 +752,15 @@ async function runFromPlanner() {
   }
   if (runBtn) {
     runBtn.disabled = true;
-    runBtn.textContent = "Checking permissions... Please wait";
+    runBtn.textContent = "Warming up... Please wait";
   }
   if (stopBtn) {
     stopBtn.disabled = true;
     stopBtn.textContent = "Stop Run";
   }
   try {
-    const permissionReady = await preflightPermissions();
-    if (!permissionReady) {
-      return;
-    }
-    try {
-      // After permissions are granted, refresh screen size in UI before execution.
-      await fetchScreenSize();
-    } catch (e) {
-      // Non-blocking: if screen-size refresh fails, still continue run flow.
-    }
+    await warmupOCR();
+    await preflightPermissions();
     if (runBtn) {
       runBtn.textContent = "Start acting... Please wait";
     }
