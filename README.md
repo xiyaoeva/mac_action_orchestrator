@@ -75,7 +75,7 @@ Permission note:
 Prompt examples:
 
 - `Open https://www.google.com in Chrome and then create a new tab, then move to the tab on the left, input wiki in this tab then search. On the results page, click the lowest (bottom-most) Wikipedia result visible on screen. No scrolling.`
-- `Open https://www.google.com in Chrome, open a new tab, then move to the tab on the left. In that tab, type "wiki" and press Enter. Wait for the results page, then scroll twice. After scrolling, click the lowest (bottom-most) visible result that contains "Wikipedia".`
+- `Open https://www.youtube.com/watch?v=5OR4c87Xt-E, and play the video from 00:30.`
 - `Open https://www.wikipedia.org in Chrome, search for "Yosemite National Park wikipedia", press Enter, wait for results, click the first visible Wikipedia result, then open the print dialog and save the page as a PDF.`
 
 ## 5. First-time macOS permissions
