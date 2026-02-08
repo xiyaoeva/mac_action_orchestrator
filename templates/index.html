@@ -726,29 +726,34 @@ async function preflightPermissions() {
     return true;
   }
   const missing = Array.isArray(data.missing) ? data.missing : [];
-  const targets = missing
-    .map((item) => item && item.code)
-    .filter((code) => typeof code === "string" && code.length > 0);
-  if (targets.length) {
+  const missingCodes = new Set(
+    missing
+      .map((item) => item && item.code)
+      .filter((code) => typeof code === "string" && code.length > 0)
+  );
+  const order = [
+    {code: "system_events_control", name: "Accessibility"},
+    {code: "screen_recording", name: "Screen Recording"},
+    {code: "chrome_automation", name: "Automation"},
+  ];
+  for (const item of order) {
+    if (!missingCodes.has(item.code)) {
+      continue;
+    }
     try {
       await fetch("/api/open_permission_settings", {
         method: "POST",
         headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({targets})
+        body: JSON.stringify({targets: [item.code]})
       });
     } catch (e) {
-      // ignore auto-open failure; keep manual guidance below
+      // ignore auto-open failure; user can still open manually
     }
+    alert(
+      `Grant ${item.name} permission to Terminal/iTerm.\n\n` +
+      `The corresponding System Settings page was opened. After granting access, click "Run" again.`
+    );
   }
-  const lines = missing.map((item) => `- ${item.label}`);
-  const msg = [
-    "Missing required permissions.",
-    "",
-    ...lines,
-    "",
-    "System Settings pages were opened automatically. Approve permissions, then click Run again.",
-  ].join("\n");
-  alert(msg);
   return false;
 }
 
