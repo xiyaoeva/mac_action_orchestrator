@@ -5,6 +5,8 @@ from typing import List, Optional, Tuple
 import time
 import re
 import threading
+import os
+import signal
 
 
 @dataclass
@@ -33,13 +35,16 @@ class RemoteMacExecutor:
         if not proc or proc.poll() is not None:
             return
         try:
-            proc.terminate()
+            os.killpg(proc.pid, signal.SIGTERM)
             proc.wait(timeout=0.5)
         except Exception:
             try:
-                proc.kill()
+                os.killpg(proc.pid, signal.SIGKILL)
             except Exception:
-                pass
+                try:
+                    proc.kill()
+                except Exception:
+                    pass
 
     def _run_command(
         self,
@@ -55,6 +60,7 @@ class RemoteMacExecutor:
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
+            start_new_session=True,
         )
         self._set_active_proc(proc)
         try:
@@ -220,13 +226,16 @@ class LocalMacExecutor:
         if not proc or proc.poll() is not None:
             return
         try:
-            proc.terminate()
+            os.killpg(proc.pid, signal.SIGTERM)
             proc.wait(timeout=0.5)
         except Exception:
             try:
-                proc.kill()
+                os.killpg(proc.pid, signal.SIGKILL)
             except Exception:
-                pass
+                try:
+                    proc.kill()
+                except Exception:
+                    pass
 
     def _run_command(
         self,
@@ -242,6 +251,7 @@ class LocalMacExecutor:
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
+            start_new_session=True,
         )
         self._set_active_proc(proc)
         try:
