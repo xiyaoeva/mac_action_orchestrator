@@ -824,6 +824,10 @@ class ExecuteOcclusionRequest(BaseModel):
     mode: str
 
 
+class OpenPermissionSettingsRequest(BaseModel):
+    targets: Optional[List[str]] = None
+
+
 @app.post("/api/screen_size")
 def screen_size():
     try:
@@ -961,6 +965,38 @@ def preflight_permissions():
                 if not missing
                 else "Some permissions are missing. Approve system dialogs, then click Run again."
             ),
+        }
+    )
+
+
+@app.post("/api/open_permission_settings")
+def open_permission_settings(req: OpenPermissionSettingsRequest):
+    """
+    Open macOS Privacy settings pages for missing permissions.
+    """
+    uri_map = {
+        "screen_recording": "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture",
+        "system_events_control": "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility",
+        "chrome_automation": "x-apple.systempreferences:com.apple.preference.security?Privacy_Automation",
+    }
+    targets = req.targets or list(uri_map.keys())
+    opened: List[str] = []
+    failed: List[Dict[str, str]] = []
+    for target in targets:
+        uri = uri_map.get(target)
+        if not uri:
+            failed.append({"target": target, "error": "unknown target"})
+            continue
+        try:
+            subprocess.run(["open", uri], check=True, capture_output=True, text=True, timeout=6)
+            opened.append(target)
+        except Exception as e:
+            failed.append({"target": target, "error": str(e)})
+    return JSONResponse(
+        {
+            "ok": len(failed) == 0,
+            "opened": opened,
+            "failed": failed,
         }
     )
 
