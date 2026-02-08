@@ -847,6 +847,124 @@ def screen_size():
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
 
+def _run_local_osascript_probe(script: str, timeout: int = 8) -> Dict[str, Any]:
+    proc = subprocess.run(
+        ["osascript", "-e", script],
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+    )
+    return {
+        "ok": proc.returncode == 0,
+        "returncode": proc.returncode,
+        "stdout": (proc.stdout or "").strip(),
+        "stderr": (proc.stderr or "").strip(),
+    }
+
+
+def _probe_screen_recording(timeout: int = 8) -> Dict[str, Any]:
+    probe_path = SCREEN_DIR / "_permission_probe_screen.png"
+    try:
+        subprocess.run(
+            ["screencapture", "-x", str(probe_path)],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+        exists = probe_path.exists() and probe_path.stat().st_size > 0
+        return {
+            "ok": bool(exists),
+            "returncode": 0 if exists else 1,
+            "stdout": "",
+            "stderr": "" if exists else "screencapture produced empty output file.",
+        }
+    except subprocess.CalledProcessError as e:
+        return {
+            "ok": False,
+            "returncode": e.returncode,
+            "stdout": (e.stdout or "").strip(),
+            "stderr": (e.stderr or "").strip(),
+        }
+    except Exception as e:
+        return {
+            "ok": False,
+            "returncode": -1,
+            "stdout": "",
+            "stderr": str(e),
+        }
+    finally:
+        try:
+            if probe_path.exists():
+                probe_path.unlink()
+        except Exception:
+            pass
+
+
+@app.post("/api/preflight_permissions")
+def preflight_permissions():
+    """
+    Trigger/check required local macOS permissions before a run.
+
+    Note:
+    - macOS controls permission prompts; this endpoint can only trigger checks.
+    - Once granted, checks should pass without showing dialogs again.
+    """
+    checks: List[Dict[str, Any]] = []
+
+    # Screen Recording is needed for screenshots and OCR pipelines.
+    screen_probe = _probe_screen_recording()
+    checks.append(
+        {
+            "code": "screen_recording",
+            "label": "Screen Recording",
+            **screen_probe,
+        }
+    )
+
+    # System Events control may require Accessibility + Automation approval.
+    sys_events_probe = _run_local_osascript_probe(
+        'tell application "System Events" to get name of first process'
+    )
+    checks.append(
+        {
+            "code": "system_events_control",
+            "label": "Accessibility / Automation (System Events)",
+            **sys_events_probe,
+        }
+    )
+
+    # Chrome automation permission is required for browser actions.
+    chrome_probe = _run_local_osascript_probe(
+        'tell application "Google Chrome" to get (count of windows)'
+    )
+    checks.append(
+        {
+            "code": "chrome_automation",
+            "label": "Automation (Google Chrome)",
+            **chrome_probe,
+        }
+    )
+
+    missing = [
+        {"code": c["code"], "label": c["label"], "error": c.get("stderr") or c.get("stdout") or ""}
+        for c in checks
+        if not c.get("ok")
+    ]
+    return JSONResponse(
+        {
+            "ok": len(missing) == 0,
+            "missing": missing,
+            "checks": checks,
+            "message": (
+                "All permission checks passed."
+                if not missing
+                else "Some permissions are missing. Approve system dialogs, then click Run again."
+            ),
+        }
+    )
+
+
 @app.post("/api/find_xy")
 def find_xy(req: FindXYRequest):
     try:
@@ -1942,4 +2060,3 @@ def plan_again(req: PlanAgainRequest):
         )
     except Exception as e:
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
-
