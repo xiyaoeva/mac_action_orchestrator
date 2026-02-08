@@ -23,6 +23,7 @@ PLANNER_ACTION_TYPES = [
     "type_text",
     "press_enter",
     "scroll_page",
+    "wait",
     "click_at",
     "shortcut",
     "plan_again",
