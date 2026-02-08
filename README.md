@@ -69,6 +69,8 @@ Permission note:
 - Grant all required permissions (Accessibility, Screen Recording, Automation) before expecting stable end-to-end runs.
 - It is normal if the first few runs fail while permissions are still being approved.
 - In general, you cannot fully pre-grant these permissions from code before running; macOS requires user approval dialogs.
+- Permission setup guide (step-by-step for Terminal):
+  `https://docs.google.com/document/d/1iAPZq1aGQyLF7jpY-fye3rQRxDQVX5VCJIG8thkapnE/edit?usp=sharing`
 
 Prompt examples:
 
@@ -83,6 +85,12 @@ You may need to allow permissions for Terminal:
 - Accessibility
 - Screen Recording
 - Automation (System Events / Chrome, if prompted)
+
+Permission Guide:
+
+- Use this guide to complete macOS permission setup for Terminal/iTerm:
+  `https://docs.google.com/document/d/1iAPZq1aGQyLF7jpY-fye3rQRxDQVX5VCJIG8thkapnE/edit?usp=sharing`
+- It explains what each permission is for and where to enable it in System Settings.
 
 Without these, actions or screen-size/screenshot related APIs can fail.
 
@@ -173,4 +181,3 @@ Tips for better reliability with this type of prompt:
 - Include constraints like `No scrolling`, `visible on screen`, `bottom-most`.
 - Keep target text explicit (`Wikipedia result`) rather than vague (`click that one`).
 - If there are repeated labels, include nearby context in prompt (for example: “in search results list, not top nav”).
-
