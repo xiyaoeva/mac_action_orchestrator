@@ -6,6 +6,7 @@ import time
 from typing import List, Optional, Tuple, Dict, Any
 import subprocess
 import tempfile
+import threading
 from collections import Counter
 
 from pydantic import BaseModel
@@ -36,6 +37,55 @@ LAST_TAB_URLS: Optional[List[str]] = None
 LAST_NEW_TAB_URL: Optional[str] = None
 API_KEY_POOL: Optional[ApiKeyPool] = None
 API_KEY_POOL_KEYS: Optional[List[str]] = None
+_RUN_STATE_LOCK = threading.Lock()
+_RUN_ACTIVE = False
+_RUN_STOP_REQUESTED = False
+
+
+def mark_run_started():
+    global _RUN_ACTIVE, _RUN_STOP_REQUESTED
+    with _RUN_STATE_LOCK:
+        _RUN_ACTIVE = True
+        _RUN_STOP_REQUESTED = False
+
+
+def mark_run_finished():
+    global _RUN_ACTIVE, _RUN_STOP_REQUESTED
+    with _RUN_STATE_LOCK:
+        _RUN_ACTIVE = False
+        _RUN_STOP_REQUESTED = False
+
+
+def request_run_stop() -> bool:
+    """
+    Request current run to stop.
+    Returns whether a run was active at request time.
+    """
+    global _RUN_STOP_REQUESTED
+    with _RUN_STATE_LOCK:
+        active = _RUN_ACTIVE
+        _RUN_STOP_REQUESTED = True
+        return active
+
+
+def should_stop_run() -> bool:
+    with _RUN_STATE_LOCK:
+        return _RUN_STOP_REQUESTED
+
+
+def interruptible_sleep(seconds: float) -> bool:
+    """
+    Sleep in small slices so Stop Run can interrupt wait actions quickly.
+    Returns True if full sleep completed, False if interrupted by stop request.
+    """
+    remaining = max(0.0, float(seconds))
+    while remaining > 0:
+        if should_stop_run():
+            return False
+        chunk = min(0.1, remaining)
+        time.sleep(chunk)
+        remaining -= chunk
+    return True
 
 def load_config() -> RemoteConfig:
     cfg_path = BASE_DIR / "config.json"
@@ -1099,6 +1149,16 @@ def run_action(action: Action, cooldown_seconds: Optional[float] = None):
         return JSONResponse({"ok": False, "error": str(e), "action": action.model_dump()}, status_code=500)
 
 
+@app.post("/api/stop_run")
+def stop_run():
+    active = request_run_stop()
+    return JSONResponse({
+        "ok": True,
+        "stop_requested": True,
+        "run_active": active,
+    })
+
+
 @app.post("/api/run_actions")
 def run_actions(req: ActionsRequest):
     """
@@ -1107,6 +1167,7 @@ def run_actions(req: ActionsRequest):
     results = []
     log_path: Optional[Path] = None
     exec_impl = None
+    mark_run_started()
     try:
         set_api_keys(req.api_keys)
         exec_impl = select_executor(req.mode)
@@ -1120,6 +1181,18 @@ def run_actions(req: ActionsRequest):
         click_recovery_used = False
         idx = 0
         while idx < len(expanded_actions):
+            if should_stop_run():
+                if log_path:
+                    append_log_line(log_path, "[END] stopped_by_user")
+                return JSONResponse({
+                    "ok": False,
+                    "stopped": True,
+                    "stopped_at": idx,
+                    "results": results,
+                    "latest_tab_url": latest_tab_url,
+                    "log_url": log_url,
+                    **({"sequence_run": True} if req.sequence_run else {}),
+                })
             prev_tab_urls = get_chrome_tab_urls(executor_obj=exec_impl)
             action = expanded_actions[idx]
             reason_for_action: Optional[str] = None
@@ -1220,7 +1293,18 @@ def run_actions(req: ActionsRequest):
             if action.type == "wait":
                 if action.seconds is None:
                     raise ValueError("wait requires seconds")
-                time.sleep(action.seconds)
+                if not interruptible_sleep(action.seconds):
+                    if log_path:
+                        append_log_line(log_path, "[END] stopped_by_user_during_wait")
+                    return JSONResponse({
+                        "ok": False,
+                        "stopped": True,
+                        "stopped_at": idx,
+                        "results": results,
+                        "latest_tab_url": latest_tab_url,
+                        "log_url": log_url,
+                        **({"sequence_run": True} if req.sequence_run else {}),
+                    })
                 results.append({
                     "ok": True,
                     "returncode": 0,
@@ -1310,6 +1394,8 @@ def run_actions(req: ActionsRequest):
             **({"log_url": log_url} if log_url else {}),
             **({"sequence_run": True} if req.sequence_run else {}),
         }, status_code=500)
+    finally:
+        mark_run_finished()
 
 
 @app.post("/api/run_actions_sequence")
