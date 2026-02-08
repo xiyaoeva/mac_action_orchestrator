@@ -90,6 +90,25 @@ def interruptible_sleep(seconds: float) -> bool:
         remaining -= chunk
     return True
 
+
+def detect_permission_blocked(returncode: Optional[int], stdout: str, stderr: str) -> Optional[str]:
+    out = (stdout or "").strip()
+    err = (stderr or "").strip()
+    combined = f"{out}\n{err}".lower()
+    signals = [
+        "accessibility_not_trusted",
+        "not authorized to send apple events",
+        "not allowed to send keystrokes",
+        "system events got an error",
+        "不允许发送按键",
+        "不允许发送 apple events",
+    ]
+    if any(sig in combined for sig in signals):
+        return "macOS permission denied."
+    if returncode == 1002:
+        return "macOS permission denied."
+    return None
+
 def load_config() -> RemoteConfig:
     cfg_path = BASE_DIR / "config.json"
     if not cfg_path.exists():
@@ -857,74 +876,6 @@ class ExecuteOcclusionRequest(BaseModel):
     mode: str
 
 
-def _probe_screen_recording(timeout: int = 8) -> Dict[str, Any]:
-    probe_path = SCREEN_DIR / "_warmup_screen.png"
-    try:
-        subprocess.run(
-            ["screencapture", "-x", str(probe_path)],
-            check=True,
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-        )
-        ok = probe_path.exists() and probe_path.stat().st_size > 0
-        return {
-            "ok": bool(ok),
-            "returncode": 0 if ok else 1,
-            "stdout": "",
-            "stderr": "" if ok else "screencapture produced no output.",
-        }
-    except subprocess.CalledProcessError as e:
-        return {
-            "ok": False,
-            "returncode": e.returncode,
-            "stdout": (e.stdout or "").strip(),
-            "stderr": (e.stderr or "").strip(),
-        }
-    except Exception as e:
-        return {"ok": False, "returncode": -1, "stdout": "", "stderr": str(e)}
-    finally:
-        try:
-            if probe_path.exists():
-                probe_path.unlink()
-        except Exception:
-            pass
-
-
-def _probe_click_accessibility(timeout: int = 8) -> Dict[str, Any]:
-    action = Action(type="click_at", x=5, y=5)
-    script = applescript_for_action(action)
-    rc, out, err = local_executor.run_osascript(script, timeout=timeout, rate_limit_seconds=0)
-    stdout = (out or "").strip()
-    stderr = (err or "").strip()
-    blocked = "ACCESSIBILITY_NOT_TRUSTED" in stdout or "not allowed" in stderr.lower()
-    ok = rc == 0 and "CLICK_OK" in stdout and not blocked
-    return {"ok": ok, "returncode": rc, "stdout": stdout, "stderr": stderr}
-
-
-def _probe_shortcut_accessibility(timeout: int = 8) -> Dict[str, Any]:
-    press = applescript_for_action(Action(type="press_key", key_code=56))
-    release = applescript_for_action(Action(type="release_key", key_code=56))
-    rc1, out1, err1 = local_executor.run_osascript(press, timeout=timeout, rate_limit_seconds=0)
-    rc2, out2, err2 = local_executor.run_osascript(release, timeout=timeout, rate_limit_seconds=0)
-    ok = rc1 == 0 and rc2 == 0
-    return {
-        "ok": ok,
-        "returncode": 0 if ok else (rc1 if rc1 != 0 else rc2),
-        "stdout": "\n".join([x for x in [out1, out2] if x]),
-        "stderr": "\n".join([x for x in [err1, err2] if x]),
-    }
-
-
-def _probe_screen_size(timeout: int = 8) -> Dict[str, Any]:
-    size, stdout, stderr, rc = local_executor.get_screen_size_debug(timeout=timeout, rate_limit_seconds=0)
-    ok = bool(size and size[0] > 0 and size[1] > 0)
-    payload: Dict[str, Any] = {"ok": ok, "returncode": rc, "stdout": stdout, "stderr": stderr}
-    if size:
-        payload["size"] = {"width": size[0], "height": size[1]}
-    return payload
-
-
 @app.post("/api/screen_size")
 def screen_size():
     try:
@@ -946,40 +897,6 @@ def screen_size():
         return JSONResponse({"ok": True, "width": size[0], "height": size[1], "stdout": stdout})
     except Exception as e:
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
-
-
-@app.post("/api/warmup_permissions")
-def warmup_permissions():
-    checks: List[Dict[str, Any]] = []
-    probes = [
-        ("screen_recording", "screenshot", _probe_screen_recording),
-        ("click_accessibility", "click", _probe_click_accessibility),
-        ("shortcut_accessibility", "shortcut", _probe_shortcut_accessibility),
-        ("system_events_control", "screen_size", _probe_screen_size),
-    ]
-    for code, label, fn in probes:
-        try:
-            result = fn()
-        except Exception as e:
-            result = {"ok": False, "returncode": -1, "stdout": "", "stderr": str(e)}
-        checks.append({"code": code, "label": label, **result})
-    missing = [
-        {
-            "code": c["code"],
-            "label": c["label"],
-            "error": c.get("stderr") or c.get("stdout") or "",
-        }
-        for c in checks
-        if not c.get("ok")
-    ]
-    return JSONResponse(
-        {
-            "ok": len(missing) == 0,
-            "checks": checks,
-            "missing": missing,
-            "message": "warmup ok" if not missing else "warmup has failures",
-        }
-    )
 
 
 @app.post("/api/find_xy")
@@ -1078,6 +995,16 @@ def execute_click(req: ExecuteClickRequest):
         action = Action(type="click_at", x=x, y=y)
         script = applescript_for_action(action)
         rc, out, err = executor.run_osascript(script, rate_limit_seconds=0)
+        permission_err = detect_permission_blocked(rc, out, err)
+        if permission_err:
+            return JSONResponse({
+                "ok": False,
+                "returncode": rc,
+                "stdout": out,
+                "stderr": err,
+                "error": permission_err,
+                "action": action.model_dump(),
+            }, status_code=500)
         local_path = new_screen_path()
         try:
             executor.capture_screen_to_local(local_path, rate_limit_seconds=0)
@@ -1190,6 +1117,17 @@ def execute_occlusion(req: ExecuteOcclusionRequest):
                 continue
             script = applescript_for_action(act)
             rc, out, err = executor.run_osascript(script, rate_limit_seconds=0)
+            permission_err = detect_permission_blocked(rc, out, err)
+            if permission_err:
+                results.append({
+                    "ok": False,
+                    "returncode": rc,
+                    "stdout": out,
+                    "stderr": err,
+                    "error": permission_err,
+                    "action": act.model_dump(),
+                })
+                return JSONResponse({"ok": False, "results": results}, status_code=500)
             results.append({
                 "ok": (rc == 0),
                 "returncode": rc,
@@ -1218,6 +1156,21 @@ def execute_occlusion(req: ExecuteOcclusionRequest):
         script = applescript_for_action(retry_action)
         rc, out, err = executor.run_osascript(script, rate_limit_seconds=0)
         latest_tab_url = update_latest_tab_url(previous_urls=prev_tab_urls)
+        permission_err = detect_permission_blocked(rc, out, err)
+        if permission_err:
+            retry_entry = {
+                "ok": False,
+                "returncode": rc,
+                "stdout": out,
+                "stderr": err,
+                "error": permission_err,
+                "action": retry_action.model_dump(),
+                "latest_tab_url": latest_tab_url,
+            }
+            if reason_for_action:
+                retry_entry["reason"] = reason_for_action
+            results.append(retry_entry)
+            return JSONResponse({"ok": False, "results": results, "latest_tab_url": latest_tab_url}, status_code=500)
         retry_entry = {
             "ok": (rc == 0),
             "returncode": rc,
@@ -1258,6 +1211,16 @@ def run_action(action: Action, cooldown_seconds: Optional[float] = None):
         prev_tab_urls = get_chrome_tab_urls()
         script = applescript_for_action(action)
         rc, out, err = executor.run_osascript(script, rate_limit_seconds=cooldown_seconds)
+        permission_err = detect_permission_blocked(rc, out, err)
+        if permission_err:
+            return JSONResponse({
+                "ok": False,
+                "returncode": rc,
+                "stdout": out,
+                "stderr": err,
+                "error": permission_err,
+                "action": action.model_dump(),
+            }, status_code=500)
 
         # After action, capture screen for verification (can be made optional)
         local_path = new_screen_path()
@@ -1457,9 +1420,10 @@ def run_actions(req: ActionsRequest):
 
             script = applescript_for_action(action)
             rc, out, err = exec_impl.run_osascript(script, rate_limit_seconds=0)
+            permission_err = detect_permission_blocked(rc, out, err)
             latest_tab_url = update_latest_tab_url(previous_urls=prev_tab_urls, executor_obj=exec_impl)
             entry = {
-                "ok": (rc == 0),
+                "ok": (rc == 0 and permission_err is None),
                 "returncode": rc,
                 "stdout": out,
                 "stderr": err,
@@ -1468,10 +1432,12 @@ def run_actions(req: ActionsRequest):
             }
             if reason_for_action:
                 entry["reason"] = reason_for_action
+            if permission_err:
+                entry["error"] = permission_err
             results.append(entry)
             if log_path:
                 append_log_line(log_path, json.dumps(entry, ensure_ascii=False))
-            if rc != 0:
+            if rc != 0 or permission_err:
                 if log_path:
                     append_log_line(log_path, "[END] stopped_at=" + str(idx))
                 show_completion_dialog(exec_impl, ok=False, log_name=log_path.name if log_path else "n/a")
