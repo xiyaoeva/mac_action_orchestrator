@@ -1,5 +1,8 @@
 import json
 import re
+import struct
+import zlib
+import binascii
 from pathlib import Path
 from datetime import datetime
 import time
@@ -187,6 +190,30 @@ app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="stat
 _OCR_WARMED = False
 
 
+def build_solid_png(width: int, height: int, rgb: Tuple[int, int, int] = (255, 255, 255)) -> bytes:
+    """
+    Build a simple RGB PNG in-memory without external dependencies.
+    """
+    if width <= 0 or height <= 0:
+        raise ValueError("PNG size must be positive.")
+    r, g, b = rgb
+    row = b"\x00" + bytes([r, g, b]) * width
+    raw = row * height
+    compressed = zlib.compress(raw, level=9)
+
+    def chunk(tag: bytes, data: bytes) -> bytes:
+        crc = binascii.crc32(tag + data) & 0xFFFFFFFF
+        return struct.pack("!I", len(data)) + tag + data + struct.pack("!I", crc)
+
+    ihdr = struct.pack("!IIBBBBB", width, height, 8, 2, 0, 0, 0)
+    return (
+        b"\x89PNG\r\n\x1a\n"
+        + chunk(b"IHDR", ihdr)
+        + chunk(b"IDAT", compressed)
+        + chunk(b"IEND", b"")
+    )
+
+
 def warmup_vision_ocr() -> bool:
     """
     Warm up Swift/Vision OCR at startup.
@@ -202,16 +229,10 @@ def warmup_vision_ocr() -> bool:
     global _OCR_WARMED
     if _OCR_WARMED:
         return True
+    warmup_path = SCREEN_DIR / "_ocr_warmup.png"
     try:
-        # 1x1 transparent PNG used only to trigger the Swift/Vision pipeline.
-        warmup_png = (
-            b"\x89PNG\r\n\x1a\n"
-            b"\x00\x00\x00\rIHDR"
-            b"\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89"
-            b"\x00\x00\x00\x0bIDAT\x08\xd7c\x00\x01\x00\x00\x05\x00\x01\r\n-\xb4"
-            b"\x00\x00\x00\x00IEND\xaeB`\x82"
-        )
-        warmup_path = SCREEN_DIR / "_ocr_warmup.png"
+        # Use a normal-size image; 1x1 can fail Vision text request on some macOS versions.
+        warmup_png = build_solid_png(128, 128)
         warmup_path.write_bytes(warmup_png)
         _ = vision_ocr_tokens(warmup_path)
         _OCR_WARMED = True
@@ -221,7 +242,6 @@ def warmup_vision_ocr() -> bool:
         return False
     finally:
         try:
-            warmup_path = SCREEN_DIR / "_ocr_warmup.png"
             if warmup_path.exists():
                 warmup_path.unlink()
         except Exception:
