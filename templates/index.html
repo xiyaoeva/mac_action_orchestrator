@@ -168,6 +168,18 @@
       filter: grayscale(0.2);
     }
 
+    .stop-btn {
+      background: #b6423f;
+      color: #fff8f8;
+      margin-top: 8px;
+    }
+
+    .stop-btn[disabled] {
+      opacity: 0.6;
+      cursor: not-allowed;
+      filter: grayscale(0.2);
+    }
+
     .status-pill {
       display: inline-block;
       min-height: 20px;
@@ -284,6 +296,7 @@
         <textarea id="plan-prompt" rows="8">Open Chrome, go to https://www.google.com, then type "mac action orchestrator" into the search box and press Enter.</textarea>
         <div style="margin-top:12px;">
           <button id="planner-run-btn" class="run-btn" onclick="runFromPlanner()">Run</button>
+          <button id="stop-run-btn" class="stop-btn" onclick="stopRun()" disabled>Stop Run</button>
         </div>
       </div>
     </section>
@@ -703,12 +716,17 @@ async function generatePlan(alreadyRetried) {
 
 async function runFromPlanner() {
   const runBtn = document.getElementById("planner-run-btn");
+  const stopBtn = document.getElementById("stop-run-btn");
   if (runBtn && runBtn.disabled) {
     return;
   }
   if (runBtn) {
     runBtn.disabled = true;
     runBtn.textContent = "Start acting... Please wait";
+  }
+  if (stopBtn) {
+    stopBtn.disabled = false;
+    stopBtn.textContent = "Stop Run";
   }
   try {
     const data = await generatePlan();
@@ -722,6 +740,33 @@ async function runFromPlanner() {
       runBtn.disabled = false;
       runBtn.textContent = "Run";
     }
+    if (stopBtn) {
+      stopBtn.disabled = true;
+      stopBtn.textContent = "Stop Run";
+    }
+  }
+}
+
+async function stopRun() {
+  const stopBtn = document.getElementById("stop-run-btn");
+  const runBtn = document.getElementById("planner-run-btn");
+  if (!stopBtn || stopBtn.disabled) {
+    return;
+  }
+  stopBtn.disabled = true;
+  stopBtn.textContent = "Stopping...";
+  if (runBtn && runBtn.disabled) {
+    runBtn.textContent = "Stopping... Please wait";
+  }
+  try {
+    const res = await fetch("/api/stop_run", {method: "POST"});
+    const data = await res.json();
+    document.getElementById("result").textContent = JSON.stringify(data, null, 2);
+  } catch (e) {
+    document.getElementById("result").textContent = JSON.stringify({
+      ok: false,
+      error: String(e)
+    }, null, 2);
   }
 }
 
