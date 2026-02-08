@@ -726,13 +726,27 @@ async function preflightPermissions() {
     return true;
   }
   const missing = Array.isArray(data.missing) ? data.missing : [];
+  const targets = missing
+    .map((item) => item && item.code)
+    .filter((code) => typeof code === "string" && code.length > 0);
+  if (targets.length) {
+    try {
+      await fetch("/api/open_permission_settings", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({targets})
+      });
+    } catch (e) {
+      // ignore auto-open failure; keep manual guidance below
+    }
+  }
   const lines = missing.map((item) => `- ${item.label}`);
   const msg = [
     "Missing required permissions.",
     "",
     ...lines,
     "",
-    "Approve macOS dialogs/system settings, then click Run again.",
+    "System Settings pages were opened automatically. Approve permissions, then click Run again.",
   ].join("\n");
   alert(msg);
   return false;
