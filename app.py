@@ -11,6 +11,7 @@ import subprocess
 import tempfile
 import threading
 from collections import Counter
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from pydantic import BaseModel
 from fastapi import FastAPI, Request
@@ -644,6 +645,57 @@ def update_latest_tab_url(
         LAST_NEW_TAB_URL = new_urls[-1]
     LAST_TAB_URLS = urls
     return LAST_NEW_TAB_URL
+
+
+def extract_time_seconds_from_prompt(prompt: Optional[str]) -> Optional[int]:
+    text = (prompt or "").strip()
+    if not text:
+        return None
+    # Matches HH:MM:SS or MM:SS (for example: 00:30, 01:02:03).
+    match = re.search(r"\b(?:(\d{1,2}):)?(\d{1,2}):([0-5]\d)\b", text)
+    if not match:
+        return None
+    h_raw, m_raw, s_raw = match.groups()
+    if h_raw is None:
+        hours = 0
+        minutes = int(m_raw)
+    else:
+        hours = int(h_raw)
+        minutes = int(m_raw)
+    seconds = int(s_raw)
+    return hours * 3600 + minutes * 60 + seconds
+
+
+def build_youtube_seek_url(url: str, seconds: int) -> Optional[str]:
+    if not url or seconds < 0:
+        return None
+    parsed = urlsplit(url)
+    host = (parsed.netloc or "").lower()
+    if "youtube.com" not in host:
+        return None
+    query_items = [(k, v) for k, v in parse_qsl(parsed.query, keep_blank_values=True) if k not in {"t", "start"}]
+    query_items.append(("t", f"{int(seconds)}s"))
+    new_query = urlencode(query_items)
+    return urlunsplit((parsed.scheme, parsed.netloc, parsed.path, new_query, parsed.fragment))
+
+
+def maybe_build_youtube_seek_action(
+    prompt: Optional[str],
+    latest_tab_url: Optional[str],
+    planned_actions: List[Action],
+) -> Optional[Action]:
+    if not latest_tab_url:
+        return None
+    # "Based on Gemini judgement" -> only apply when this planning result is not deferred by another plan_again.
+    if any(a.type == "plan_again" for a in planned_actions):
+        return None
+    seconds = extract_time_seconds_from_prompt(prompt)
+    if seconds is None:
+        return None
+    seek_url = build_youtube_seek_url(latest_tab_url, seconds)
+    if not seek_url:
+        return None
+    return Action(type="open_url", url=seek_url)
 
 
 def build_plan_again_prompt(prompt: str, ocr_tokens: List[str]) -> str:
@@ -1383,6 +1435,14 @@ def run_actions(req: ActionsRequest):
                 if err:
                     raise ValueError(f"plan_again failed: {err}")
                 new_actions = [Action.model_validate(batch[0]) for batch in batches]
+                current_latest_tab_url = update_latest_tab_url(previous_urls=prev_tab_urls, executor_obj=exec_impl)
+                yt_seek_action = maybe_build_youtube_seek_action(
+                    prompt=action.prompt,
+                    latest_tab_url=current_latest_tab_url,
+                    planned_actions=new_actions,
+                )
+                if yt_seek_action:
+                    new_actions = [yt_seek_action, *new_actions]
                 new_actions = expand_actions(new_actions)
                 expanded_actions = expanded_actions[:idx] + new_actions + expanded_actions[idx + 1:]
                 results.append({
@@ -1394,6 +1454,7 @@ def run_actions(req: ActionsRequest):
                     "planned_actions": [a.model_dump() for a in new_actions],
                     "ocr_tokens": ocr_tokens,
                     "allowed_targets": allowed_targets,
+                    **({"youtube_seek_url": yt_seek_action.url} if yt_seek_action else {}),
                 })
                 if log_path:
                     append_log_line(log_path, json.dumps(results[-1], ensure_ascii=False))
@@ -2041,6 +2102,14 @@ def plan_again(req: PlanAgainRequest):
                 },
                 status_code=400,
             )
+        planned_actions = [Action.model_validate(batch[0]) for batch in batches]
+        yt_seek_action = maybe_build_youtube_seek_action(
+            prompt=req.prompt,
+            latest_tab_url=LAST_NEW_TAB_URL,
+            planned_actions=planned_actions,
+        )
+        if yt_seek_action:
+            batches = [[yt_seek_action.model_dump()]] + batches
         return JSONResponse(
             {
                 "ok": True,
@@ -2049,6 +2118,7 @@ def plan_again(req: PlanAgainRequest):
                 "args": {"batches": batches},
                 "ocr_tokens": ocr_tokens,
                 "allowed_targets": allowed_targets,
+                **({"youtube_seek_url": yt_seek_action.url} if yt_seek_action else {}),
             }
         )
     except Exception as e:
