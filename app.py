@@ -828,6 +828,61 @@ class OpenPermissionSettingsRequest(BaseModel):
     targets: Optional[List[str]] = None
 
 
+def _probe_click_accessibility(timeout: int = 8) -> Dict[str, Any]:
+    """
+    Trigger Accessibility permission prompt via AX trust check (no actual click event).
+    """
+    jxa = (
+        'ObjC.import("ApplicationServices"); '
+        "var trusted = false; "
+        "try { "
+        "  if ($.AXIsProcessTrustedWithOptions) { "
+        "    var opts = $.NSDictionary.dictionaryWithObjectForKey(true, $.kAXTrustedCheckOptionPrompt); "
+        "    trusted = $.AXIsProcessTrustedWithOptions(opts); "
+        "  } else { "
+        "    trusted = $.AXIsProcessTrusted(); "
+        "  } "
+        "} catch (e) { "
+        "  console.log('ACCESSIBILITY_CHECK_ERROR:' + e); "
+        "} "
+        "console.log(trusted ? 'ACCESSIBILITY_TRUSTED' : 'ACCESSIBILITY_NOT_TRUSTED');"
+    )
+    proc = subprocess.run(
+        ["osascript", "-l", "JavaScript", "-e", jxa],
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+    )
+    out = (proc.stdout or "").strip()
+    err = (proc.stderr or "").strip()
+    ok = proc.returncode == 0 and "ACCESSIBILITY_TRUSTED" in out
+    return {"ok": ok, "returncode": proc.returncode, "stdout": out, "stderr": err}
+
+
+def _probe_shortcut_accessibility(timeout: int = 8) -> Dict[str, Any]:
+    """
+    Trigger keyboard automation path (System Events key down/up).
+    """
+    script = r'''
+tell application "System Events"
+  key down 56
+  key up 56
+end tell
+return "ok"
+'''
+    rc, out, err = local_executor.run_osascript(script, timeout=timeout, rate_limit_seconds=0)
+    return {"ok": rc == 0, "returncode": rc, "stdout": out, "stderr": err}
+
+
+def _probe_screen_size(timeout: int = 8) -> Dict[str, Any]:
+    size, stdout, stderr, rc = local_executor.get_screen_size_debug(timeout=timeout, rate_limit_seconds=0)
+    ok = bool(size and size[0] > 0 and size[1] > 0)
+    payload = {"ok": ok, "returncode": rc, "stdout": stdout, "stderr": stderr}
+    if size:
+        payload["size"] = {"width": size[0], "height": size[1]}
+    return payload
+
+
 @app.post("/api/screen_size")
 def screen_size():
     try:
@@ -967,6 +1022,47 @@ def preflight_permissions():
             ),
         }
     )
+
+
+@app.post("/api/warmup_permissions")
+def warmup_permissions():
+    """
+    Sequential permission warmup/probe for Start flow.
+
+    Strategy:
+    - Probe one capability at a time in execution order.
+    - Return immediately at first missing permission so prompts are handled one-by-one.
+    """
+    checks: List[Dict[str, Any]] = []
+    probes = [
+        ("system_events_control", "Accessibility / Automation (System Events)", _probe_screen_size),
+        ("screen_recording", "Screen Recording", _probe_screen_recording),
+        ("click_accessibility", "Accessibility (click warmup)", _probe_click_accessibility),
+        ("shortcut_accessibility", "Accessibility (shortcut warmup)", _probe_shortcut_accessibility),
+        ("chrome_automation", "Automation (Google Chrome)", lambda: _run_local_osascript_probe(
+            'tell application "Google Chrome" to get (count of windows)'
+        )),
+    ]
+    for code, label, fn in probes:
+        result = fn()
+        check = {"code": code, "label": label, **result}
+        checks.append(check)
+        if not check.get("ok"):
+            return JSONResponse(
+                {
+                    "ok": False,
+                    "missing": [
+                        {
+                            "code": code,
+                            "label": label,
+                            "error": check.get("stderr") or check.get("stdout") or "",
+                        }
+                    ],
+                    "checks": checks,
+                    "message": "Permission warmup blocked at first missing capability.",
+                }
+            )
+    return JSONResponse({"ok": True, "missing": [], "checks": checks, "message": "Permission warmup passed."})
 
 
 @app.post("/api/open_permission_settings")
