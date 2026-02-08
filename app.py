@@ -158,6 +158,60 @@ def get_gemini_client(api_keys: Optional[List[str]] = None):
     return API_KEY_POOL.get_client()
 
 
+def is_gemini_quota_error(err: Exception) -> bool:
+    text = str(err).lower()
+    signals = [
+        "resource_exhausted",
+        "quota exceeded",
+        "429",
+        "rate limit",
+        "generate_content_free_tier_requests",
+    ]
+    return any(sig in text for sig in signals)
+
+
+def current_api_key_count(api_keys: Optional[List[str]] = None) -> int:
+    if api_keys is not None:
+        cleaned = ApiKeyPool._normalize_keys(api_keys)
+        return len(cleaned)
+    if API_KEY_POOL is None:
+        return 0
+    return len(API_KEY_POOL.keys())
+
+
+def gemini_generate_content_with_failover(
+    *,
+    model: str,
+    contents,
+    config,
+    api_keys: Optional[List[str]] = None,
+):
+    attempts = max(1, current_api_key_count(api_keys=api_keys))
+    last_error: Optional[Exception] = None
+    for attempt in range(1, attempts + 1):
+        client = get_gemini_client(api_keys=api_keys)
+        try:
+            return client.models.generate_content(
+                model=model,
+                contents=contents,
+                config=config,
+            )
+        except Exception as e:
+            last_error = e
+            should_failover = is_gemini_quota_error(e) and attempt < attempts
+            if should_failover:
+                print(f"[gemini_failover] quota error on key attempt {attempt}/{attempts}; trying next key")
+                continue
+            break
+    if last_error is not None and is_gemini_quota_error(last_error) and attempts > 1:
+        raise RuntimeError(
+            f"All {attempts} API keys were exhausted (quota/rate-limit). Last error: {last_error}"
+        ) from last_error
+    if last_error is not None:
+        raise last_error
+    raise RuntimeError("Gemini request failed without a captured error.")
+
+
 def sanitize_log_id(log_id: str) -> str:
     safe = re.sub(r"[^A-Za-z0-9_.-]", "_", log_id or "").strip("_")
     if not safe:
@@ -323,7 +377,6 @@ def locate_click_with_gemini(
     api_keys: Optional[List[str]] = None,
 ) -> Tuple[int, int]:
     from google.genai import types
-    client = get_gemini_client(api_keys=api_keys)
     image_size = read_png_size(image_path)
     size_hint = f"Screenshot size: {image_size[0]}x{image_size[1]} pixels." if image_size else ""
     prompt = (
@@ -354,10 +407,11 @@ def locate_click_with_gemini(
         types.Part.from_bytes(data=image_path.read_bytes(), mime_type="image/png"),
     ]
     content = types.Content(role="user", parts=parts)
-    response = client.models.generate_content(
+    response = gemini_generate_content_with_failover(
         model=model,
         contents=[content],
         config=config,
+        api_keys=api_keys,
     )
     function_call = None
     parts = []
@@ -798,7 +852,6 @@ def choose_target_index_with_gemini(
     api_keys: Optional[List[str]] = None,
 ) -> int:
     from google.genai import types
-    client = get_gemini_client(api_keys=api_keys)
     prompt = (
         "You are given a screenshot with numbered boxes marking candidate targets.\n"
         "Choose the correct number for the target described below.\n"
@@ -825,10 +878,11 @@ def choose_target_index_with_gemini(
         types.Part.from_bytes(data=image_path.read_bytes(), mime_type="image/png"),
     ]
     content = types.Content(role="user", parts=parts)
-    response = client.models.generate_content(
+    response = gemini_generate_content_with_failover(
         model=model,
         contents=[content],
         config=config,
+        api_keys=api_keys,
     )
     function_call = None
     try:
@@ -1933,21 +1987,22 @@ def call_gemini_planner(
         function_decls = build_action_function_declarations(include_plan_again=allow_plan_again)
     tools = types.Tool(function_declarations=function_decls)
     config = types.GenerateContentConfig(tools=[tools])
-    client = get_gemini_client(api_keys=api_keys)
     if image_paths:
         parts = [types.Part.from_text(text=planner_system_prompt() + prompt)]
         for path in image_paths:
             parts.append(types.Part.from_bytes(data=path.read_bytes(), mime_type="image/png"))
         content = types.Content(role="user", parts=parts)
-        return client.models.generate_content(
+        return gemini_generate_content_with_failover(
             model=model,
             contents=[content],
             config=config,
+            api_keys=api_keys,
         )
-    return client.models.generate_content(
+    return gemini_generate_content_with_failover(
         model=model,
         contents=planner_system_prompt() + prompt,
         config=config,
+        api_keys=api_keys,
     )
 
 def validate_planner_args(
