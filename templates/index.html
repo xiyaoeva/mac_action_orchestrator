@@ -714,6 +714,26 @@ async function generatePlan(alreadyRetried) {
   return data;
 }
 
+async function preflightPermissions() {
+  const res = await fetch("/api/preflight_permissions", {method: "POST"});
+  const data = await res.json();
+  document.getElementById("result").textContent = JSON.stringify(data, null, 2);
+  if (data.ok) {
+    return true;
+  }
+  const missing = Array.isArray(data.missing) ? data.missing : [];
+  const lines = missing.map((item) => `- ${item.label}`);
+  const msg = [
+    "Missing required permissions.",
+    "",
+    ...lines,
+    "",
+    "Approve macOS dialogs/system settings, then click Run again.",
+  ].join("\n");
+  alert(msg);
+  return false;
+}
+
 async function runFromPlanner() {
   const runBtn = document.getElementById("planner-run-btn");
   const stopBtn = document.getElementById("stop-run-btn");
@@ -722,13 +742,23 @@ async function runFromPlanner() {
   }
   if (runBtn) {
     runBtn.disabled = true;
-    runBtn.textContent = "Start acting... Please wait";
+    runBtn.textContent = "Checking permissions... Please wait";
   }
   if (stopBtn) {
-    stopBtn.disabled = false;
+    stopBtn.disabled = true;
     stopBtn.textContent = "Stop Run";
   }
   try {
+    const permissionReady = await preflightPermissions();
+    if (!permissionReady) {
+      return;
+    }
+    if (runBtn) {
+      runBtn.textContent = "Start acting... Please wait";
+    }
+    if (stopBtn) {
+      stopBtn.disabled = false;
+    }
     const data = await generatePlan();
     if (!data || !data.ok || !data.args || !Array.isArray(data.args.batches)) {
       return;
@@ -865,4 +895,3 @@ async function executeOcclusionMode(mode) {
 </script>
 </body>
 </html>
-
