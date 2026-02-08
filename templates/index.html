@@ -727,13 +727,6 @@ async function generatePlan(alreadyRetried) {
   return data;
 }
 
-async function preflightPermissions() {
-  const res = await fetch("/api/warmup_permissions", {method: "POST"});
-  const data = await res.json();
-  document.getElementById("result").textContent = JSON.stringify(data, null, 2);
-  return !!data.ok;
-}
-
 async function warmupOCR() {
   try {
     const res = await fetch("/api/warmup_ocr", {method: "POST"});
@@ -760,7 +753,6 @@ async function runFromPlanner() {
   }
   try {
     await warmupOCR();
-    await preflightPermissions();
     if (runBtn) {
       runBtn.textContent = "Start acting... Please wait";
     }
