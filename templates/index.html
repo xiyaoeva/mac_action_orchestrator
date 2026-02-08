@@ -757,6 +757,12 @@ async function runFromPlanner() {
     if (!permissionReady) {
       return;
     }
+    try {
+      // After permissions are granted, refresh screen size in UI before execution.
+      await fetchScreenSize();
+    } catch (e) {
+      // Non-blocking: if screen-size refresh fails, still continue run flow.
+    }
     if (runBtn) {
       runBtn.textContent = "Start acting... Please wait";
     }
