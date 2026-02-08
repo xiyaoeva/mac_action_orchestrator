@@ -27,7 +27,7 @@ In project root:
 cd /path/to/mac-action-orchestrator
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt --index-url https://pypi.org/
+pip install -r requirements.txt --index-url https://pypi.org/simple
 ```
 
 If you copied this project and `.venv` did not exist before, creating it is expected.
